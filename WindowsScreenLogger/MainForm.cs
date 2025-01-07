@@ -91,7 +91,8 @@ public partial class MainForm : Form
 
 	private void ShowSettings(object sender, EventArgs e)
 	{
-		// Show settings form
+		using var settingsForm = new SettingsForm();
+		settingsForm.ShowDialog();
 	}
 
 	private void Exit(object sender, EventArgs e)
