@@ -9,6 +9,8 @@ public partial class MainForm : Form
 	private int captureInterval;
 	private Bitmap screenBitmap;
 	private Graphics screenGraphics;
+	private ImageCodecInfo jpegEncoder;
+	private string savePath;
 
 	static string GetSavePath() =>
 		Path.Combine(
@@ -21,6 +23,8 @@ public partial class MainForm : Form
 		InitializeComponent();
 		ConfigureCaptureTimer();
 		InitializeScreenCapture();
+		jpegEncoder = GetEncoder(ImageFormat.Jpeg);
+		savePath = GetSavePath();
 	}
 
 	private void MainForm_Load(object sender, EventArgs e)
@@ -67,10 +71,9 @@ public partial class MainForm : Form
 			screenGraphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
 
 			// Save the combined image
-			string folderPath = GetSavePath();
-			Directory.CreateDirectory(folderPath);
-			string filePath = Path.Combine(folderPath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
-			screenBitmap.Save(filePath, GetEncoder(ImageFormat.Jpeg), GetEncoderParameters(50L));
+			Directory.CreateDirectory(savePath);
+			string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
+			screenBitmap.Save(filePath, jpegEncoder, GetEncoderParameters(50L));
 		}
 		catch (Exception ex)
 		{
@@ -109,10 +112,9 @@ public partial class MainForm : Form
 	{
 		try
 		{
-			string folderPath = GetSavePath();
-			if (Directory.Exists(folderPath))
+			if (Directory.Exists(savePath))
 			{
-				System.Diagnostics.Process.Start("explorer.exe", folderPath);
+				System.Diagnostics.Process.Start("explorer.exe", savePath);
 			}
 			else
 			{
