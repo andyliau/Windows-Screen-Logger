@@ -58,5 +58,17 @@ namespace WindowsScreenLogger {
                 this["ImageQuality"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("32")]
+        public int ColorDepth {
+            get {
+                return ((int)(this["ColorDepth"]));
+            }
+            set {
+                this["ColorDepth"] = value;
+            }
+        }
     }
 }

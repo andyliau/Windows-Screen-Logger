@@ -18,6 +18,8 @@ public partial class SettingsForm : Form
 		this.comboBoxImageSize = new ComboBox();
 		this.label3 = new Label();
 		this.trackBarQuality = new TrackBar();
+		this.label4 = new Label();
+		this.comboBoxColorDepth = new ComboBox();
 		this.buttonSave = new Button();
 		this.buttonCancel = new Button();
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownInterval)).BeginInit();
@@ -71,9 +73,9 @@ public partial class SettingsForm : Form
 		this.comboBoxImageSize.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
 		this.comboBoxImageSize.FormattingEnabled = true;
 		this.comboBoxImageSize.Items.AddRange(new object[] {
-											"Full",
-											"Half",
-											"Quarter"});
+				"Full",
+				"Half",
+				"Quarter"});
 		this.comboBoxImageSize.Location = new Point(120, 97);
 		this.comboBoxImageSize.Name = "comboBoxImageSize";
 		this.comboBoxImageSize.Size = new Size(120, 29);
@@ -101,13 +103,37 @@ public partial class SettingsForm : Form
 		this.trackBarQuality.Size = new Size(230, 45);
 		this.trackBarQuality.TabIndex = 6;
 		// 
-		// buttonSave
+		// label4
 		// 
+		this.label4.AutoSize = true;
+		this.label4.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.label4.Location = new Point(20, 190);
+		this.label4.Name = "label4";
+		this.label4.Size = new Size(90, 21);
+		this.label4.TabIndex = 7;
+		this.label4.Text = "Color Depth:";
+		// 
+		// comboBoxColorDepth
+		// 
+		this.comboBoxColorDepth.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.comboBoxColorDepth.FormattingEnabled = true;
+		this.comboBoxColorDepth.Items.AddRange(new object[] {
+				"32",
+				"16",
+				"8"});
+		this.comboBoxColorDepth.Location = new Point(120, 187);
+		this.comboBoxColorDepth.Name = "comboBoxColorDepth";
+		this.comboBoxColorDepth.Size = new Size(120, 29);
+		this.comboBoxColorDepth.TabIndex = 8;
+		this.comboBoxColorDepth.SelectedIndex = 0; // Default to "32"
+												   // 
+												   // buttonSave
+												   // 
 		this.buttonSave.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-		this.buttonSave.Location = new Point(100, 200);
+		this.buttonSave.Location = new Point(100, 240);
 		this.buttonSave.Name = "buttonSave";
 		this.buttonSave.Size = new Size(100, 30);
-		this.buttonSave.TabIndex = 7;
+		this.buttonSave.TabIndex = 9;
 		this.buttonSave.Text = "Save";
 		this.buttonSave.UseVisualStyleBackColor = true;
 		this.buttonSave.Click += new EventHandler(this.ButtonSave_Click);
@@ -115,10 +141,10 @@ public partial class SettingsForm : Form
 		// buttonCancel
 		// 
 		this.buttonCancel.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-		this.buttonCancel.Location = new Point(220, 200);
+		this.buttonCancel.Location = new Point(220, 240);
 		this.buttonCancel.Name = "buttonCancel";
 		this.buttonCancel.Size = new Size(100, 30);
-		this.buttonCancel.TabIndex = 8;
+		this.buttonCancel.TabIndex = 10;
 		this.buttonCancel.Text = "Cancel";
 		this.buttonCancel.UseVisualStyleBackColor = true;
 		this.buttonCancel.Click += new EventHandler(this.ButtonCancel_Click);
@@ -127,9 +153,11 @@ public partial class SettingsForm : Form
 		// 
 		this.AutoScaleDimensions = new SizeF(7F, 15F);
 		this.AutoScaleMode = AutoScaleMode.Font;
-		this.ClientSize = new Size(400, 250);
+		this.ClientSize = new Size(400, 300);
 		this.Controls.Add(this.buttonCancel);
 		this.Controls.Add(this.buttonSave);
+		this.Controls.Add(this.comboBoxColorDepth);
+		this.Controls.Add(this.label4);
 		this.Controls.Add(this.trackBarQuality);
 		this.Controls.Add(this.label3);
 		this.Controls.Add(this.comboBoxImageSize);
@@ -157,6 +185,8 @@ public partial class SettingsForm : Form
 	private ComboBox comboBoxImageSize;
 	private Label label3;
 	private TrackBar trackBarQuality;
+	private Label label4;
+	private ComboBox comboBoxColorDepth;
 	private Button buttonSave;
 	private Button buttonCancel;
 
@@ -167,6 +197,7 @@ public partial class SettingsForm : Form
 		checkBoxStartWithWindows.Checked = GetStartup();
 		comboBoxImageSize.SelectedItem = Settings.Default.ImageSize;
 		trackBarQuality.Value = Settings.Default.ImageQuality;
+		comboBoxColorDepth.SelectedItem = Settings.Default.ColorDepth.ToString();
 	}
 
 	private void ButtonSave_Click(object sender, EventArgs e)
@@ -175,6 +206,7 @@ public partial class SettingsForm : Form
 		Settings.Default.CaptureInterval = (int)numericUpDownInterval.Value;
 		Settings.Default.ImageSize = comboBoxImageSize.SelectedItem.ToString();
 		Settings.Default.ImageQuality = trackBarQuality.Value;
+		Settings.Default.ColorDepth = int.Parse(comboBoxColorDepth.SelectedItem.ToString());
 		Settings.Default.Save();
 
 		// Set or remove startup entry
