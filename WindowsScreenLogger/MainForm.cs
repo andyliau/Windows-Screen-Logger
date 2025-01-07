@@ -1,11 +1,4 @@
-using System;
-using System.Drawing;
 using System.Drawing.Imaging;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Windows.Forms;
-using Microsoft.Win32;
 using Timer = System.Windows.Forms.Timer;
 
 namespace WindowsScreenLogger;
@@ -14,7 +7,8 @@ public partial class MainForm : Form
 {
 	private Timer captureTimer;
 	private int captureInterval;
-	public static string getSavePath() => 
+
+	static string getSavePath() => 
 		Path.Combine(
 			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
 			"WindowsScreenLogger", 
@@ -23,8 +17,6 @@ public partial class MainForm : Form
 	public MainForm()
 	{
 		InitializeComponent();
-
-		LoadSettings();
 		ConfigureCaptureTimer();
 	}
 
@@ -33,17 +25,9 @@ public partial class MainForm : Form
 		this.Hide();
 	}
 
-	private void LoadSettings()
-	{
-		captureInterval = Settings.Default.CaptureInterval;
-		if (Settings.Default.StartWithWindows)
-		{
-			SetStartup(true);
-		}
-	}
-
 	private void ConfigureCaptureTimer()
 	{
+		captureInterval = Settings.Default.CaptureInterval;
 		captureTimer = new Timer
 		{
 			Interval = captureInterval * 1000
@@ -117,19 +101,5 @@ public partial class MainForm : Form
 	{
 		notifyIcon.Visible = false;
 		Application.Exit();
-	}
-
-	private void SetStartup(bool enable)
-	{
-		const string runKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
-		using RegistryKey key = Registry.CurrentUser.OpenSubKey(runKey, true);
-		if (enable)
-		{
-			key.SetValue(Application.ProductName, Application.ExecutablePath);
-		}
-		else
-		{
-			key.DeleteValue(Application.ProductName, false);
-		}
 	}
 }

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Windows.Forms;
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 
 namespace WindowsScreenLogger;
 
@@ -35,19 +33,12 @@ public partial class SettingsForm : Form
 		// 
 		this.numericUpDownInterval.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
 		this.numericUpDownInterval.Location = new Point(250, 18);
-		this.numericUpDownInterval.Minimum = new decimal(new int[] {
-			1,
-			0,
-			0,
-			0});
+		this.numericUpDownInterval.Minimum = 1;
+		this.numericUpDownInterval.Maximum = 60;
 		this.numericUpDownInterval.Name = "numericUpDownInterval";
 		this.numericUpDownInterval.Size = new Size(120, 29);
 		this.numericUpDownInterval.TabIndex = 1;
-		this.numericUpDownInterval.Value = new decimal(new int[] {
-			5,
-			0,
-			0,
-			0});
+		this.numericUpDownInterval.Value = new decimal(new int[] { 5, 0, 0, 0 });
 		// 
 		// checkBoxStartWithWindows
 		// 
@@ -114,14 +105,13 @@ public partial class SettingsForm : Form
 	{
 		// Load settings
 		numericUpDownInterval.Value = Settings.Default.CaptureInterval;
-		checkBoxStartWithWindows.Checked = Settings.Default.StartWithWindows;
+		checkBoxStartWithWindows.Checked = GetStartup();
 	}
 
 	private void ButtonSave_Click(object sender, EventArgs e)
 	{
 		// Save settings
 		Settings.Default.CaptureInterval = (int)numericUpDownInterval.Value;
-		Settings.Default.StartWithWindows = checkBoxStartWithWindows.Checked;
 		Settings.Default.Save();
 
 		// Set or remove startup entry
@@ -149,5 +139,12 @@ public partial class SettingsForm : Form
 		{
 			key.DeleteValue(Application.ProductName, false);
 		}
+	}
+
+	private bool GetStartup()
+	{
+		const string runKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
+		using RegistryKey key = Registry.CurrentUser.OpenSubKey(runKey, true);
+		return key.GetValue(Application.ProductName) != null;
 	}
 }
