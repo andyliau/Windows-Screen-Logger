@@ -34,5 +34,29 @@ namespace WindowsScreenLogger {
                 this["CaptureInterval"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Full")]
+        public string ImageSize {
+            get {
+                return ((string)(this["ImageSize"]));
+            }
+            set {
+                this["ImageSize"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("50")]
+        public int ImageQuality {
+            get {
+                return ((int)(this["ImageQuality"]));
+            }
+            set {
+                this["ImageQuality"] = value;
+            }
+        }
     }
 }

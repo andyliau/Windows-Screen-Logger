@@ -132,14 +132,29 @@ public partial class MainForm : Form
 			// Capture the entire virtual screen
 			screenGraphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
 
-			// Resize the image to reduce file size
-			int newWidth = bounds.Width / 2;
-			int newHeight = bounds.Height / 2;
+			// Resize the image based on settings
+			int newWidth = bounds.Width;
+			int newHeight = bounds.Height;
+			if (Settings.Default.ImageSize != "Full")
+			{
+				switch (Settings.Default.ImageSize)
+				{
+					case "Half":
+						newWidth /= 2;
+						newHeight /= 2;
+						break;
+					case "Quarter":
+						newWidth /= 4;
+						newHeight /= 4;
+						break;
+				}
+			}
+
 			using (Bitmap resizedBitmap = new Bitmap(screenBitmap, new Size(newWidth, newHeight)))
 			{
 				// Save the resized image
 				string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
-				resizedBitmap.Save(filePath, jpegEncoder, GetEncoderParameters(30L));
+				resizedBitmap.Save(filePath, jpegEncoder, GetEncoderParameters(Settings.Default.ImageQuality));
 			}
 		}
 		catch (Exception ex)
