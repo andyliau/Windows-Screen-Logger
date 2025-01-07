@@ -13,6 +13,7 @@ public partial class MainForm : Form
 	private Graphics screenGraphics;
 	private ImageCodecInfo jpegEncoder;
 	private string savePath;
+	private bool isSessionLocked;
 
 	private NotifyIcon notifyIcon;
 
@@ -33,6 +34,7 @@ public partial class MainForm : Form
 
 		SystemEvents.PowerModeChanged += OnPowerModeChanged;
 		SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+		SystemEvents.SessionSwitch += OnSessionSwitch;
 	}
 
 	private System.ComponentModel.IContainer components = null;
@@ -42,6 +44,7 @@ public partial class MainForm : Form
 		{
 			SystemEvents.PowerModeChanged -= OnPowerModeChanged;
 			SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+			SystemEvents.SessionSwitch -= OnSessionSwitch;
 			components?.Dispose();
 		}
 		base.Dispose(disposing);
@@ -113,7 +116,10 @@ public partial class MainForm : Form
 
 	private void CaptureTimer_Tick(object sender, EventArgs e)
 	{
-		CaptureAllScreens();
+		if (!isSessionLocked)
+		{
+			CaptureAllScreens();
+		}
 	}
 
 	private void CaptureAllScreens()
@@ -217,5 +223,19 @@ public partial class MainForm : Form
 	{
 		// Reinitialize screen capture when display settings change
 		InitializeScreenCapture();
+	}
+
+	private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+	{
+		if (e.Reason == SessionSwitchReason.SessionLock)
+		{
+			// Set flag to indicate session is locked
+			isSessionLocked = true;
+		}
+		else if (e.Reason == SessionSwitchReason.SessionUnlock)
+		{
+			// Clear flag to indicate session is unlocked
+			isSessionLocked = false;
+		}
 	}
 }
