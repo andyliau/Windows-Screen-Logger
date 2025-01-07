@@ -8,10 +8,10 @@ public partial class MainForm : Form
 	private Timer captureTimer;
 	private int captureInterval;
 
-	static string getSavePath() => 
+	static string GetSavePath() =>
 		Path.Combine(
 			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-			"WindowsScreenLogger", 
+			"WindowsScreenLogger",
 			DateTime.Now.ToString("yyyy-MM-dd"));
 
 	public MainForm()
@@ -28,6 +28,11 @@ public partial class MainForm : Form
 	private void ConfigureCaptureTimer()
 	{
 		captureInterval = Settings.Default.CaptureInterval;
+		if (captureInterval <= 0)
+		{
+			MessageBox.Show("Invalid capture interval. Please check your settings.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			return;
+		}
 		captureTimer = new Timer
 		{
 			Interval = captureInterval * 1000
@@ -43,19 +48,27 @@ public partial class MainForm : Form
 
 	private void CaptureAllScreens()
 	{
-		// Calculate the total size of the virtual screen
-		Rectangle bounds = SystemInformation.VirtualScreen;
-		using Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
-		using Graphics g = Graphics.FromImage(bitmap);
+		try
+		{
+			// Calculate the total size of the virtual screen
+			Rectangle bounds = SystemInformation.VirtualScreen;
+			using Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
+			using Graphics g = Graphics.FromImage(bitmap);
 
-		// Capture the entire virtual screen
-		g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
+			// Capture the entire virtual screen
+			g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
 
-		// Save the combined image
-		string folderPath = getSavePath();
-		Directory.CreateDirectory(folderPath);
-		string filePath = Path.Combine(folderPath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
-		bitmap.Save(filePath, GetEncoder(ImageFormat.Jpeg), GetEncoderParameters(50L));
+			// Save the combined image
+			string folderPath = GetSavePath();
+			Directory.CreateDirectory(folderPath);
+			string filePath = Path.Combine(folderPath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
+			bitmap.Save(filePath, GetEncoder(ImageFormat.Jpeg), GetEncoderParameters(50L));
+		}
+		catch (Exception ex)
+		{
+			// Log the exception or show a message to the user
+			MessageBox.Show($"An error occurred while capturing the screen: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+		}
 	}
 
 	private static ImageCodecInfo GetEncoder(ImageFormat format)
@@ -86,20 +99,32 @@ public partial class MainForm : Form
 
 	private void OpenSaveFolder(object sender, EventArgs e)
 	{
-		string folderPath = getSavePath();
-		if (Directory.Exists(folderPath))
+		try
 		{
-			System.Diagnostics.Process.Start("explorer.exe", folderPath);
+			string folderPath = GetSavePath();
+			if (Directory.Exists(folderPath))
+			{
+				System.Diagnostics.Process.Start("explorer.exe", folderPath);
+			}
+			else
+			{
+				MessageBox.Show("The folder does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
 		}
-		else
+		catch (Exception ex)
 		{
-			MessageBox.Show("The folder does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			// Log the exception or show a message to the user
+			MessageBox.Show($"An error occurred while opening the folder: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 	}
 
 	private void Exit(object sender, EventArgs e)
 	{
-		notifyIcon.Visible = false;
+		if (notifyIcon != null)
+		{
+			notifyIcon.Visible = false;
+			notifyIcon.Dispose();
+		}
 		Application.Exit();
 	}
 }
