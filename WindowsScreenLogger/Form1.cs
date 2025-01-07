@@ -54,18 +54,19 @@ public partial class MainForm : Form
 
 	private void CaptureAllScreens()
 	{
-		foreach (Screen screen in Screen.AllScreens)
-		{
-			Rectangle bounds = screen.Bounds;
-			using Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
-			using Graphics g = Graphics.FromImage(bitmap);
-			g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
-			string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DateTime.Now.ToString("yyyy-MM-dd"));
-			Directory.CreateDirectory(folderPath);
-			string filePath = Path.Combine(folderPath, $"screenshot_{screen.DeviceName.Trim('\\', '.')}_" +
-				$"{DateTime.Now:HHmmss}.jpg");
-			bitmap.Save(filePath, GetEncoder(ImageFormat.Jpeg), GetEncoderParameters(50L));
-		}
+		// Calculate the total size of the virtual screen
+		Rectangle bounds = SystemInformation.VirtualScreen;
+		using Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
+		using Graphics g = Graphics.FromImage(bitmap);
+
+		// Capture the entire virtual screen
+		g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
+
+		// Save the combined image
+		string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DateTime.Now.ToString("yyyy-MM-dd"));
+		Directory.CreateDirectory(folderPath);
+		string filePath = Path.Combine(folderPath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
+		bitmap.Save(filePath, GetEncoder(ImageFormat.Jpeg), GetEncoderParameters(50L));
 	}
 
 	private static ImageCodecInfo GetEncoder(ImageFormat format)
