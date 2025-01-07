@@ -25,6 +25,7 @@ public partial class MainForm : Form
 		InitializeScreenCapture();
 		jpegEncoder = GetEncoder(ImageFormat.Jpeg);
 		savePath = GetSavePath();
+		Directory.CreateDirectory(savePath);
 	}
 
 	private void MainForm_Load(object sender, EventArgs e)
@@ -39,6 +40,11 @@ public partial class MainForm : Form
 		{
 			MessageBox.Show("Invalid capture interval. Please check your settings.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			return;
+		}
+		if (captureTimer != null)
+		{
+			captureTimer.Stop();
+			captureTimer.Tick -= CaptureTimer_Tick;
 		}
 		captureTimer = new Timer
 		{
@@ -71,7 +77,6 @@ public partial class MainForm : Form
 			screenGraphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
 
 			// Save the combined image
-			Directory.CreateDirectory(savePath);
 			string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
 			screenBitmap.Save(filePath, jpegEncoder, GetEncoderParameters(50L));
 		}
@@ -105,7 +110,10 @@ public partial class MainForm : Form
 	private void ShowSettings(object sender, EventArgs e)
 	{
 		using var settingsForm = new SettingsForm();
-		settingsForm.ShowDialog();
+		if (settingsForm.ShowDialog() == DialogResult.OK)
+		{
+			ConfigureCaptureTimer(); // Reconfigure the timer with the new interval
+		}
 	}
 
 	private void OpenSaveFolder(object sender, EventArgs e)
