@@ -1,6 +1,6 @@
 ﻿namespace WindowsScreenLogger
 {
-	partial class Form1
+	partial class MainForm
 	{
 		/// <summary>
 		///  Required designer variable.
@@ -28,12 +28,32 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.components = new System.ComponentModel.Container();
-			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(800, 450);
-			this.Text = "Form1";
+			components = new System.ComponentModel.Container();
+			notifyIcon = new NotifyIcon(components);
+			SuspendLayout();
+			// 
+			// notifyIcon
+			// 
+			notifyIcon.Text = "Screen Logger";
+			notifyIcon.Icon = SystemIcons.Application;
+			notifyIcon.Visible = true;
+			notifyIcon.ContextMenuStrip = new ContextMenuStrip();
+			notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
+			notifyIcon.ContextMenuStrip.Items.Add("Exit", null, Exit);
+
+			// 
+			// MainForm
+			// 
+			this.ClientSize = new Size(0, 0);
+			this.Name = "MainForm";
+			this.WindowState = FormWindowState.Minimized;
+			this.ShowInTaskbar = false;
+			this.Load += new EventHandler(this.MainForm_Load);
+			this.ResumeLayout(false);
 		}
 
 		#endregion
+
+		private NotifyIcon notifyIcon;
 	}
 }
