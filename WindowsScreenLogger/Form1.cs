@@ -30,8 +30,8 @@ public partial class MainForm : Form
 
 	private void LoadSettings()
 	{
-		captureInterval = 5; //Properties.Settings.Default.CaptureInterval;
-		if (true)//Properties.Settings.Default.StartWithWindows)
+		captureInterval = Settings.Default.CaptureInterval;
+		if (Settings.Default.StartWithWindows)
 		{
 			SetStartup(true);
 		}
