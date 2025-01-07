@@ -38,6 +38,7 @@
 			notifyIcon.Icon = SystemIcons.Application;
 			notifyIcon.Visible = true;
 			notifyIcon.ContextMenuStrip = new ContextMenuStrip();
+			notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
 			notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
 			notifyIcon.ContextMenuStrip.Items.Add("Exit", null, Exit);
 

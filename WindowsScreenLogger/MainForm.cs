@@ -14,6 +14,11 @@ public partial class MainForm : Form
 {
 	private Timer captureTimer;
 	private int captureInterval;
+	public static string getSavePath() => 
+		Path.Combine(
+			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+			"WindowsScreenLogger", 
+			DateTime.Now.ToString("yyyy-MM-dd"));
 
 	public MainForm()
 	{
@@ -63,7 +68,7 @@ public partial class MainForm : Form
 		g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
 
 		// Save the combined image
-		string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DateTime.Now.ToString("yyyy-MM-dd"));
+		string folderPath = getSavePath();
 		Directory.CreateDirectory(folderPath);
 		string filePath = Path.Combine(folderPath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
 		bitmap.Save(filePath, GetEncoder(ImageFormat.Jpeg), GetEncoderParameters(50L));
@@ -93,6 +98,19 @@ public partial class MainForm : Form
 	{
 		using var settingsForm = new SettingsForm();
 		settingsForm.ShowDialog();
+	}
+
+	private void OpenSaveFolder(object sender, EventArgs e)
+	{
+		string folderPath = getSavePath();
+		if (Directory.Exists(folderPath))
+		{
+			System.Diagnostics.Process.Start("explorer.exe", folderPath);
+		}
+		else
+		{
+			MessageBox.Show("The folder does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+		}
 	}
 
 	private void Exit(object sender, EventArgs e)
