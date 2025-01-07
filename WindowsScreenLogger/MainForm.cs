@@ -32,14 +32,17 @@ public partial class MainForm : Form
 		Directory.CreateDirectory(savePath);
 
 		SystemEvents.PowerModeChanged += OnPowerModeChanged;
+		SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 	}
 
 	private System.ComponentModel.IContainer components = null;
 	protected override void Dispose(bool disposing)
 	{
-		if (disposing && (components != null))
+		if (disposing)
 		{
-			components.Dispose();
+			SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+			SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+			components?.Dispose();
 		}
 		base.Dispose(disposing);
 	}
@@ -208,5 +211,11 @@ public partial class MainForm : Form
 			// Restart the capture timer when the system resumes
 			captureTimer?.Start();
 		}
+	}
+
+	private void OnDisplaySettingsChanged(object sender, EventArgs e)
+	{
+		// Reinitialize screen capture when display settings change
+		InitializeScreenCapture();
 	}
 }
