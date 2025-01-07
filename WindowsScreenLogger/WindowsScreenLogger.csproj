@@ -10,7 +10,12 @@
 		<SelfContained>false</SelfContained>
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 		<PublishReadyToRun>true</PublishReadyToRun>
+		<ApplicationIcon>C06SYqz8FU.ico</ApplicationIcon>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Content Include="C06SYqz8FU.ico" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Compile Update="Settings.Designer.cs">

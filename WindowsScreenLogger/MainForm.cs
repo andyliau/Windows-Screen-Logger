@@ -1,4 +1,5 @@
 using System.Drawing.Imaging;
+using System.Reflection;
 using Timer = System.Windows.Forms.Timer;
 
 namespace WindowsScreenLogger;
@@ -11,6 +12,8 @@ public partial class MainForm : Form
 	private Graphics screenGraphics;
 	private ImageCodecInfo jpegEncoder;
 	private string savePath;
+
+	private NotifyIcon notifyIcon;
 
 	static string GetSavePath() =>
 		Path.Combine(
@@ -26,6 +29,47 @@ public partial class MainForm : Form
 		jpegEncoder = GetEncoder(ImageFormat.Jpeg);
 		savePath = GetSavePath();
 		Directory.CreateDirectory(savePath);
+	}
+
+	private System.ComponentModel.IContainer components = null;
+	protected override void Dispose(bool disposing)
+	{
+		if (disposing && (components != null))
+		{
+			components.Dispose();
+		}
+		base.Dispose(disposing);
+	}
+
+	private void InitializeComponent()
+	{
+		components = new System.ComponentModel.Container();
+		var resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
+		notifyIcon = new NotifyIcon(components);
+		SuspendLayout();
+
+		Icon = (Icon)resources.GetObject("$this.Icon");
+
+		// 
+		// notifyIcon
+		// 
+		notifyIcon.Text = "Screen Logger";
+		notifyIcon.Icon = this.Icon;
+		notifyIcon.Visible = true;
+		notifyIcon.ContextMenuStrip = new ContextMenuStrip();
+		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
+		notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
+		notifyIcon.ContextMenuStrip.Items.Add("Exit", null, Exit);
+
+		// 
+		// MainForm
+		// 
+		ClientSize = new Size(176, 0);
+		Name = "MainForm";
+		ShowInTaskbar = false;
+		WindowState = FormWindowState.Minimized;
+		Load += MainForm_Load;
+		ResumeLayout(false);
 	}
 
 	private void MainForm_Load(object sender, EventArgs e)
@@ -110,6 +154,7 @@ public partial class MainForm : Form
 	private void ShowSettings(object sender, EventArgs e)
 	{
 		using var settingsForm = new SettingsForm();
+		settingsForm.Icon = this.Icon;
 		if (settingsForm.ShowDialog() == DialogResult.OK)
 		{
 			ConfigureCaptureTimer(); // Reconfigure the timer with the new interval
