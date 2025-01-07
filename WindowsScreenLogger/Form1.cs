@@ -49,19 +49,23 @@ public partial class MainForm : Form
 
 	private void CaptureTimer_Tick(object sender, EventArgs e)
 	{
-		CaptureDesktop();
+		CaptureAllScreens();
 	}
 
-	private void CaptureDesktop()
+	private void CaptureAllScreens()
 	{
-		Rectangle bounds = Screen.PrimaryScreen.Bounds;
-		using Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
-		using Graphics g = Graphics.FromImage(bitmap);
-		g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
-		string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DateTime.Now.ToString("yyyy-MM-dd"));
-		Directory.CreateDirectory(folderPath);
-		string filePath = Path.Combine(folderPath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
-		bitmap.Save(filePath, GetEncoder(ImageFormat.Jpeg), GetEncoderParameters(50L));
+		foreach (Screen screen in Screen.AllScreens)
+		{
+			Rectangle bounds = screen.Bounds;
+			using Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
+			using Graphics g = Graphics.FromImage(bitmap);
+			g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
+			string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DateTime.Now.ToString("yyyy-MM-dd"));
+			Directory.CreateDirectory(folderPath);
+			string filePath = Path.Combine(folderPath, $"screenshot_{screen.DeviceName.Trim('\\', '.')}_" +
+				$"{DateTime.Now:HHmmss}.jpg");
+			bitmap.Save(filePath, GetEncoder(ImageFormat.Jpeg), GetEncoderParameters(50L));
+		}
 	}
 
 	private static ImageCodecInfo GetEncoder(ImageFormat format)
