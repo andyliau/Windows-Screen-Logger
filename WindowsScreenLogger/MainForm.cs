@@ -1,5 +1,6 @@
 using System.Drawing.Imaging;
 using System.Reflection;
+using Microsoft.Win32;
 using Timer = System.Windows.Forms.Timer;
 
 namespace WindowsScreenLogger;
@@ -29,6 +30,8 @@ public partial class MainForm : Form
 		jpegEncoder = GetEncoder(ImageFormat.Jpeg);
 		savePath = GetSavePath();
 		Directory.CreateDirectory(savePath);
+
+		SystemEvents.PowerModeChanged += OnPowerModeChanged;
 	}
 
 	private System.ComponentModel.IContainer components = null;
@@ -191,5 +194,19 @@ public partial class MainForm : Form
 		screenGraphics?.Dispose();
 		screenBitmap?.Dispose();
 		Application.Exit();
+	}
+
+	private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+	{
+		if (e.Mode == PowerModes.Suspend)
+		{
+			// Stop the capture timer when the system is suspended
+			captureTimer?.Stop();
+		}
+		else if (e.Mode == PowerModes.Resume)
+		{
+			// Restart the capture timer when the system resumes
+			captureTimer?.Start();
+		}
 	}
 }
