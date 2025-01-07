@@ -7,6 +7,8 @@ public partial class MainForm : Form
 {
 	private Timer captureTimer;
 	private int captureInterval;
+	private Bitmap screenBitmap;
+	private Graphics screenGraphics;
 
 	static string GetSavePath() =>
 		Path.Combine(
@@ -18,6 +20,7 @@ public partial class MainForm : Form
 	{
 		InitializeComponent();
 		ConfigureCaptureTimer();
+		InitializeScreenCapture();
 	}
 
 	private void MainForm_Load(object sender, EventArgs e)
@@ -41,6 +44,13 @@ public partial class MainForm : Form
 		captureTimer.Start();
 	}
 
+	private void InitializeScreenCapture()
+	{
+		Rectangle bounds = SystemInformation.VirtualScreen;
+		screenBitmap = new Bitmap(bounds.Width, bounds.Height);
+		screenGraphics = Graphics.FromImage(screenBitmap);
+	}
+
 	private void CaptureTimer_Tick(object sender, EventArgs e)
 	{
 		CaptureAllScreens();
@@ -52,17 +62,15 @@ public partial class MainForm : Form
 		{
 			// Calculate the total size of the virtual screen
 			Rectangle bounds = SystemInformation.VirtualScreen;
-			using Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
-			using Graphics g = Graphics.FromImage(bitmap);
 
 			// Capture the entire virtual screen
-			g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
+			screenGraphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
 
 			// Save the combined image
 			string folderPath = GetSavePath();
 			Directory.CreateDirectory(folderPath);
 			string filePath = Path.Combine(folderPath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
-			bitmap.Save(filePath, GetEncoder(ImageFormat.Jpeg), GetEncoderParameters(50L));
+			screenBitmap.Save(filePath, GetEncoder(ImageFormat.Jpeg), GetEncoderParameters(50L));
 		}
 		catch (Exception ex)
 		{
@@ -125,6 +133,8 @@ public partial class MainForm : Form
 			notifyIcon.Visible = false;
 			notifyIcon.Dispose();
 		}
+		screenGraphics?.Dispose();
+		screenBitmap?.Dispose();
 		Application.Exit();
 	}
 }
