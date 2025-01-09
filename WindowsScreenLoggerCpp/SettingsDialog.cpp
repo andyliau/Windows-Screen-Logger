@@ -8,12 +8,29 @@
 extern int captureInterval;
 extern int imageSizePercentage;
 extern int imageQuality;
+extern bool startWithWindows; // Add this line
 
 // Validation limits
 constexpr int MIN_INTERVAL = 1;
 constexpr int MAX_INTERVAL = 3600;
 constexpr int MIN_SIZE = 10;
 constexpr int MAX_SIZE = 100;
+
+void SetStartupWithWindows(bool enable) {
+    HKEY hKey;
+    LONG result = RegOpenKeyEx(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey);
+    if (result == ERROR_SUCCESS) {
+        if (enable) {
+            wchar_t path[MAX_PATH];
+            GetModuleFileName(NULL, path, MAX_PATH);
+            RegSetValueEx(hKey, L"WindowsScreenLogger", 0, REG_SZ, (BYTE*)path, (lstrlen(path) + 1) * sizeof(wchar_t));
+        }
+        else {
+            RegDeleteValue(hKey, L"WindowsScreenLogger");
+        }
+        RegCloseKey(hKey);
+    }
+}
 
 // Center dialog on screen
 void CenterDialog(HWND hDlg) {
@@ -66,6 +83,7 @@ INT_PTR CALLBACK SettingsDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
         // Initialize controls with current values
         SetDlgItemInt(hDlg, IDC_INTERVAL_EDIT, captureInterval, FALSE);
         SetDlgItemInt(hDlg, IDC_IMAGE_SIZE_EDIT, imageSizePercentage, FALSE);
+        CheckDlgButton(hDlg, IDC_STARTUP_CHECKBOX, startWithWindows ? BST_CHECKED : BST_UNCHECKED); // Add this line
 
         // Setup slider control
         SendDlgItemMessage(hDlg, IDC_QUALITY_SLIDER, TBM_SETRANGE, TRUE, MAKELPARAM(10, 100));
@@ -98,6 +116,8 @@ INT_PTR CALLBACK SettingsDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
             captureInterval = interval;
             imageSizePercentage = size;
             imageQuality = static_cast<int>(SendDlgItemMessage(hDlg, IDC_QUALITY_SLIDER, TBM_GETPOS, 0, 0));
+            startWithWindows = (IsDlgButtonChecked(hDlg, IDC_STARTUP_CHECKBOX) == BST_CHECKED); // Add this line
+            SetStartupWithWindows(startWithWindows); // Add this line
 
             EndDialog(hDlg, IDOK);
             return (INT_PTR)TRUE;

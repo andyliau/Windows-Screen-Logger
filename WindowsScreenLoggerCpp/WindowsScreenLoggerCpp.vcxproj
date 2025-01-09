@@ -144,6 +144,7 @@
     <ResourceCompile Include="WindowsScreenLoggerCpp.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="icon.ico" />
     <Image Include="small.ico" />
     <Image Include="WindowsScreenLoggerCpp.ico" />
   </ItemGroup>

@@ -22,6 +22,7 @@ bool isSessionLocked = false;
 int captureInterval = 5; // Default capture interval in seconds
 int imageSizePercentage = 100; // Default image size percentage
 int imageQuality = 30; // Default image quality
+bool startWithWindows = false;
 
 std::wstring GetSavePath();
 void CaptureScreen();

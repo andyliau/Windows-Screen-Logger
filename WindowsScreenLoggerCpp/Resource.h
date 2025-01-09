@@ -5,6 +5,7 @@
 #define IDC_SAVE_BUTTON                 1004
 #define IDC_CANCEL_BUTTON               1005
 #define IDC_QUALITY_LABEL               1006
+#define IDC_STARTUP_CHECKBOX            1007
 
 #define IDS_APP_TITLE                   103
 #define IDI_WINDOWSSCREENLOGGERCPP      107
