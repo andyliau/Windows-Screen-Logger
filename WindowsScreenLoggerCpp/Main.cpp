@@ -55,44 +55,101 @@ std::wstring GetSavePath() {
 void CaptureScreen() {
     if (isSessionLocked) return;
 
+    // Set DPI awareness
+    SetProcessDPIAware();
+
     // Get the total width and height of the virtual screen
     int totalWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
     int totalHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
     int left = GetSystemMetrics(SM_XVIRTUALSCREEN);
     int top = GetSystemMetrics(SM_YVIRTUALSCREEN);
 
-    HDC hdcScreen = GetDC(NULL);
-    HDC hdcMem = CreateCompatibleDC(hdcScreen);
-    HBITMAP hbmScreen = CreateCompatibleBitmap(hdcScreen, totalWidth, totalHeight);
-    SelectObject(hdcMem, hbmScreen);
+    // Initialize GDI+ objects with RAII
+    HDC hdcScreen = nullptr;
+    HDC hdcMem = nullptr;
+    HBITMAP hbmScreen = nullptr;
 
-    // Capture the entire virtual screen
-    BitBlt(hdcMem, 0, 0, totalWidth, totalHeight, hdcScreen, left, top, SRCCOPY);
+    try {
+        // Get the screen DC
+        hdcScreen = GetDC(NULL);
+        if (!hdcScreen) throw std::runtime_error("Failed to get screen DC");
 
-    Gdiplus::Bitmap bitmap(hbmScreen, NULL);
-    int newWidth = totalWidth * imageSizePercentage / 100;
-    int newHeight = totalHeight * imageSizePercentage / 100;
-    Gdiplus::Bitmap resizedBitmap(newWidth, newHeight, PixelFormat32bppARGB);
-    Gdiplus::Graphics graphics(&resizedBitmap);
-    graphics.DrawImage(&bitmap, 0, 0, newWidth, newHeight);
+        // Create a compatible DC
+        hdcMem = CreateCompatibleDC(hdcScreen);
+        if (!hdcMem) {
+            ReleaseDC(NULL, hdcScreen);
+            throw std::runtime_error("Failed to create compatible DC");
+        }
 
-    CLSID clsid;
-    GetEncoderClsid(L"image/jpeg", &clsid);
-    Gdiplus::EncoderParameters encoderParameters;
-    encoderParameters.Count = 1;
-    encoderParameters.Parameter[0].Guid = Gdiplus::EncoderQuality;
-    encoderParameters.Parameter[0].Type = Gdiplus::EncoderParameterValueTypeLong;
-    encoderParameters.Parameter[0].NumberOfValues = 1;
-    ULONG quality = imageQuality;
-    encoderParameters.Parameter[0].Value = &quality;
+        // Create a compatible bitmap
+        hbmScreen = CreateCompatibleBitmap(hdcScreen, totalWidth, totalHeight);
+        if (!hbmScreen) {
+            DeleteDC(hdcMem);
+            ReleaseDC(NULL, hdcScreen);
+            throw std::runtime_error("Failed to create compatible bitmap");
+        }
 
-    std::wstring savePath = GetSavePath();
-    std::wstring filePath = savePath + L"\\screenshot_" + std::to_wstring(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())) + L".jpg";
-    resizedBitmap.Save(filePath.c_str(), &clsid, &encoderParameters);
+        // Select the bitmap into the compatible DC
+        HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmScreen);
 
-    DeleteObject(hbmScreen);
-    DeleteDC(hdcMem);
-    ReleaseDC(NULL, hdcScreen);
+        // Capture the entire virtual screen
+        BOOL bResult = BitBlt(hdcMem, 0, 0, totalWidth, totalHeight,
+            hdcScreen, left, top, SRCCOPY);
+        if (!bResult) {
+            throw std::runtime_error("BitBlt failed");
+        }
+
+        // Convert to Gdiplus::Bitmap
+        Gdiplus::Bitmap bitmap(hbmScreen, NULL);
+
+        // Calculate new dimensions
+        int newWidth = totalWidth * imageSizePercentage / 100;
+        int newHeight = totalHeight * imageSizePercentage / 100;
+
+        // Create resized bitmap with correct pixel format
+        Gdiplus::Bitmap resizedBitmap(newWidth, newHeight, PixelFormat32bppARGB);
+
+        // Set up high-quality scaling
+        Gdiplus::Graphics graphics(&resizedBitmap);
+        graphics.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+        graphics.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
+        graphics.DrawImage(&bitmap, 0, 0, newWidth, newHeight);
+
+        // Set up JPEG encoding
+        CLSID clsid;
+        GetEncoderClsid(L"image/jpeg", &clsid);
+        Gdiplus::EncoderParameters encoderParameters;
+        encoderParameters.Count = 1;
+        encoderParameters.Parameter[0].Guid = Gdiplus::EncoderQuality;
+        encoderParameters.Parameter[0].Type = Gdiplus::EncoderParameterValueTypeLong;
+        encoderParameters.Parameter[0].NumberOfValues = 1;
+        ULONG quality = imageQuality;
+        encoderParameters.Parameter[0].Value = &quality;
+
+        // Save the image
+        std::wstring savePath = GetSavePath();
+        std::wstring filePath = savePath + L"\\screenshot_" +
+            std::to_wstring(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())) +
+            L".jpg";
+
+        Gdiplus::Status saveStatus = resizedBitmap.Save(filePath.c_str(), &clsid, &encoderParameters);
+        if (saveStatus != Gdiplus::Ok) {
+            throw std::runtime_error("Failed to save image");
+        }
+
+        // Clean up GDI resources
+        SelectObject(hdcMem, hbmOld);
+        DeleteObject(hbmScreen);
+        DeleteDC(hdcMem);
+        ReleaseDC(NULL, hdcScreen);
+    }
+    catch (const std::exception& e) {
+        // Clean up on error
+        if (hbmScreen) DeleteObject(hbmScreen);
+        if (hdcMem) DeleteDC(hdcMem);
+        if (hdcScreen) ReleaseDC(NULL, hdcScreen);
+        throw; // Re-throw the exception
+    }
 }
 
 void CALLBACK TimerProc(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
