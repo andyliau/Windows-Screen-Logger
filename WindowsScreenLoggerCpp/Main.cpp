@@ -36,10 +36,22 @@ std::wstring GetSavePath() {
     wchar_t* userProfile;
     size_t len;
     _wdupenv_s(&userProfile, &len, L"USERPROFILE");
-    std::wstring path = std::wstring(userProfile) + L"\\WindowsScreenLogger\\" + std::to_wstring(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+
+    // Get current time
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+    std::tm local_tm;
+    localtime_s(&local_tm, &now_c);
+
+    // Format date as YYYY-MM-DD
+    wchar_t dateStr[11];
+    wcsftime(dateStr, sizeof(dateStr), L"%Y-%m-%d", &local_tm);
+
+    std::wstring path = std::wstring(userProfile) + L"\\WindowsScreenLogger\\" + dateStr;
     fs::create_directories(path);
     return path;
 }
+
 
 void CaptureScreen() {
     if (isSessionLocked) return;
