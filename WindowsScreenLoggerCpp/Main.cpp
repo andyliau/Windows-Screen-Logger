@@ -7,6 +7,7 @@
 #include <thread>
 #include "resource.h"
 #include <commctrl.h>
+#include "SettingsDialog.h"
 
 #pragma comment (lib,"Gdiplus.lib")
 
@@ -30,7 +31,6 @@ void OpenSaveFolder();
 void Exit();
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
-INT_PTR CALLBACK SettingsDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 std::wstring GetSavePath() {
     wchar_t* userProfile;
@@ -316,37 +316,3 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid) {
     free(pImageCodecInfo);
     return -1;
 }
-
-INT_PTR CALLBACK SettingsDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message) {
-    case WM_INITDIALOG:
-        SetDlgItemInt(hDlg, IDC_INTERVAL_EDIT, captureInterval, FALSE);
-        SetDlgItemInt(hDlg, IDC_IMAGE_SIZE_EDIT, imageSizePercentage, FALSE);
-        SendDlgItemMessage(hDlg, IDC_QUALITY_SLIDER, TBM_SETRANGE, TRUE, MAKELPARAM(10, 100));
-        SendDlgItemMessage(hDlg, IDC_QUALITY_SLIDER, TBM_SETPOS, TRUE, imageQuality);
-        return (INT_PTR)TRUE;
-
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDC_SAVE_BUTTON) {
-            BOOL success;
-            int interval = GetDlgItemInt(hDlg, IDC_INTERVAL_EDIT, &success, FALSE);
-            if (success) captureInterval = interval;
-
-            int size = GetDlgItemInt(hDlg, IDC_IMAGE_SIZE_EDIT, &success, FALSE);
-            if (success) imageSizePercentage = size;
-
-            imageQuality = SendDlgItemMessage(hDlg, IDC_QUALITY_SLIDER, TBM_GETPOS, 0, 0);
-
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        else if (LOWORD(wParam) == IDC_CANCEL_BUTTON) {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
-    }
-    return (INT_PTR)FALSE;
-}
-
