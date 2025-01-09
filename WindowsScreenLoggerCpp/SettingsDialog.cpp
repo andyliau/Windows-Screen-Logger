@@ -17,7 +17,7 @@ constexpr int MAX_SIZE = 100;
 
 // Center dialog on screen
 void CenterDialog(HWND hDlg) {
-    RECT rc, rcDlg, rcOwner;
+    RECT rc, rcDlg;
     GetWindowRect(GetDesktopWindow(), &rc);
     GetWindowRect(hDlg, &rcDlg);
 
@@ -30,7 +30,7 @@ void CenterDialog(HWND hDlg) {
 
 // Update the quality label with current value
 void UpdateQualityLabel(HWND hDlg) {
-    int quality = SendDlgItemMessage(hDlg, IDC_QUALITY_SLIDER, TBM_GETPOS, 0, 0);
+    int quality = static_cast<int>(SendDlgItemMessage(hDlg, IDC_QUALITY_SLIDER, TBM_GETPOS, 0, 0));
     SetDlgItemInt(hDlg, IDC_QUALITY_LABEL, quality, FALSE);
 }
 
@@ -97,7 +97,7 @@ INT_PTR CALLBACK SettingsDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
             // Save settings
             captureInterval = interval;
             imageSizePercentage = size;
-            imageQuality = SendDlgItemMessage(hDlg, IDC_QUALITY_SLIDER, TBM_GETPOS, 0, 0);
+            imageQuality = static_cast<int>(SendDlgItemMessage(hDlg, IDC_QUALITY_SLIDER, TBM_GETPOS, 0, 0));
 
             EndDialog(hDlg, IDOK);
             return (INT_PTR)TRUE;
