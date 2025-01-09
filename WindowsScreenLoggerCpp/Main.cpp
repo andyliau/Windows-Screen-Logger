@@ -52,38 +52,22 @@ std::wstring GetSavePath() {
     return path;
 }
 
-
 void CaptureScreen() {
     if (isSessionLocked) return;
 
-    // Get the total width and height of all screens
-    int totalWidth = 0;
-    int totalHeight = 0;
-    int screenCount = GetSystemMetrics(SM_CMONITORS);
-    for (int i = 0; i < screenCount; ++i) {
-        HMONITOR hMonitor = MonitorFromPoint(POINT{ totalWidth, 0 }, MONITOR_DEFAULTTONEAREST);
-        MONITORINFO mi = { sizeof(mi) };
-        GetMonitorInfo(hMonitor, &mi);
-        totalWidth += mi.rcMonitor.right - mi.rcMonitor.left;
-        totalHeight = max(totalHeight, mi.rcMonitor.bottom - mi.rcMonitor.top);
-    }
+    // Get the total width and height of the virtual screen
+    int totalWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    int totalHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+    int left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    int top = GetSystemMetrics(SM_YVIRTUALSCREEN);
 
     HDC hdcScreen = GetDC(NULL);
     HDC hdcMem = CreateCompatibleDC(hdcScreen);
     HBITMAP hbmScreen = CreateCompatibleBitmap(hdcScreen, totalWidth, totalHeight);
     SelectObject(hdcMem, hbmScreen);
 
-    // Capture each screen and combine into one image
-    int currentWidth = 0;
-    for (int i = 0; i < screenCount; ++i) {
-        HMONITOR hMonitor = MonitorFromPoint(POINT{ currentWidth, 0 }, MONITOR_DEFAULTTONEAREST);
-        MONITORINFO mi = { sizeof(mi) };
-        GetMonitorInfo(hMonitor, &mi);
-        int width = mi.rcMonitor.right - mi.rcMonitor.left;
-        int height = mi.rcMonitor.bottom - mi.rcMonitor.top;
-        BitBlt(hdcMem, currentWidth, 0, width, height, hdcScreen, mi.rcMonitor.left, mi.rcMonitor.top, SRCCOPY);
-        currentWidth += width;
-    }
+    // Capture the entire virtual screen
+    BitBlt(hdcMem, 0, 0, totalWidth, totalHeight, hdcScreen, left, top, SRCCOPY);
 
     Gdiplus::Bitmap bitmap(hbmScreen, NULL);
     int newWidth = totalWidth * imageSizePercentage / 100;
@@ -110,7 +94,6 @@ void CaptureScreen() {
     DeleteDC(hdcMem);
     ReleaseDC(NULL, hdcScreen);
 }
-
 
 void CALLBACK TimerProc(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
     CaptureScreen();
