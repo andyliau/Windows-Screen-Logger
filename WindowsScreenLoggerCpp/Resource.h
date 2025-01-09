@@ -12,6 +12,11 @@
 #define IDM_EXIT                        110
 #define IDM_ABOUT                       111
 #define IDD_ABOUTBOX                    112
+#define IDR_TRAY_MENU                   113
+
+#define ID_TRAY_EXIT                    2001
+#define ID_TRAY_OPEN_SAVE_FOLDER        2002
+#define ID_TRAY_SHOW_SETTINGS           2003
 
 #define IDC_MYICON                      2
 #ifndef IDC_STATIC
@@ -29,4 +34,3 @@
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
-

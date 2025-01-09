@@ -99,6 +99,20 @@ void Exit() {
     PostQuitMessage(0);
 }
 
+void ShowTrayMenu(HWND hWnd) {
+    POINT pt;
+    GetCursorPos(&pt);
+    HMENU hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_TRAY_MENU));
+    if (hMenu) {
+        HMENU hSubMenu = GetSubMenu(hMenu, 0);
+        if (hSubMenu) {
+            SetForegroundWindow(hWnd);
+            TrackPopupMenu(hSubMenu, TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hWnd, NULL);
+        }
+        DestroyMenu(hMenu);
+    }
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
     case WM_CREATE:
@@ -117,6 +131,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             ShowSettings();
             break;
         case 3:
+            Exit();
+            break;
+        case ID_TRAY_OPEN_SAVE_FOLDER:
+            OpenSaveFolder();
+            break;
+        case ID_TRAY_SHOW_SETTINGS:
+            ShowSettings();
+            break;
+        case ID_TRAY_EXIT:
             Exit();
             break;
         }
@@ -140,6 +163,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     case WM_USER + 1:
         if (lParam == WM_LBUTTONDBLCLK) {
             OpenSaveFolder();
+        }
+        else if (lParam == WM_RBUTTONDOWN) {
+            ShowTrayMenu(hWnd);
         }
         break;
     default:
@@ -249,6 +275,4 @@ INT_PTR CALLBACK SettingsDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
     }
     return (INT_PTR)FALSE;
 }
-
-
 
