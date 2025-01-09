@@ -266,11 +266,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 
     RegisterClassEx(&wcex);
 
-    HWND hWnd = CreateWindow(L"WindowsScreenLoggerCpp", L"Windows Screen Logger", WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
+    // Create a message-only window
+    HWND hWnd = CreateWindowEx(0, L"WindowsScreenLoggerCpp", NULL, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
 
-    ShowWindow(hWnd, nCmdShow);
-    UpdateWindow(hWnd);
+    if (!hWnd) {
+        return FALSE;
+    }
 
     nid.cbSize = sizeof(NOTIFYICONDATA);
     nid.hWnd = hWnd;
@@ -287,9 +288,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
         DispatchMessage(&msg);
     }
 
+    Shell_NotifyIcon(NIM_DELETE, &nid);
     GdiplusShutdown(gdiplusToken);
     return (int)msg.wParam;
 }
+
 
 int GetEncoderClsid(const WCHAR* format, CLSID* pClsid) {
     UINT num = 0;
