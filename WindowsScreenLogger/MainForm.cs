@@ -12,16 +12,9 @@ public partial class MainForm : Form
 	private Bitmap screenBitmap;
 	private Graphics screenGraphics;
 	private ImageCodecInfo jpegEncoder;
-	private string savePath;
 	private bool isSessionLocked;
 
 	private NotifyIcon notifyIcon;
-
-	static string GetSavePath() =>
-		Path.Combine(
-			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-			"WindowsScreenLogger",
-			DateTime.Now.ToString("yyyy-MM-dd"));
 
 	public MainForm()
 	{
@@ -29,8 +22,6 @@ public partial class MainForm : Form
 		ConfigureCaptureTimer();
 		InitializeScreenCapture();
 		jpegEncoder = GetEncoder(ImageFormat.Jpeg);
-		savePath = GetSavePath();
-		Directory.CreateDirectory(savePath);
 
 		SystemEvents.PowerModeChanged += OnPowerModeChanged;
 		SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
@@ -124,6 +115,7 @@ public partial class MainForm : Form
 
 	private void CaptureAllScreens()
 	{
+		var savePath = GetSavePath();
 		try
 		{
 			// Calculate the total size of the virtual screen
@@ -149,6 +141,16 @@ public partial class MainForm : Form
 			// Log the exception or show a message to the user
 			MessageBox.Show($"An error occurred while capturing the screen: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
+	}
+
+	static string GetSavePath()
+	{
+		var path = Path.Combine(
+			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+			"WindowsScreenLogger",
+			DateTime.Now.ToString("yyyy-MM-dd"));
+		Directory.CreateDirectory(path);
+		return path;
 	}
 
 	private static ImageCodecInfo GetEncoder(ImageFormat format)
@@ -185,14 +187,8 @@ public partial class MainForm : Form
 	{
 		try
 		{
-			if (Directory.Exists(savePath))
-			{
-				System.Diagnostics.Process.Start("explorer.exe", savePath);
-			}
-			else
-			{
-				MessageBox.Show("The folder does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
+			var savePath = GetSavePath();
+			System.Diagnostics.Process.Start("explorer.exe", savePath);
 		}
 		catch (Exception ex)
 		{
