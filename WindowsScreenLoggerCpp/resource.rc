@@ -1,19 +1,32 @@
 #include "resource.h"
 #include <windows.h>
 
-IDD_SETTINGS_DIALOG DIALOGEX 0, 0, 276, 180
+// Resource.h additions
+#define IDC_QUALITY_LABEL           1001
+
+// Dialog resource
+IDD_SETTINGS_DIALOG DIALOGEX 0, 0, 300, 200
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Settings"
-FONT 8, "MS Shell Dlg"
+CAPTION "Screen Capture Settings"
+FONT 9, "Segoe UI"
 BEGIN
-    LTEXT           "Capture Interval (seconds):", IDC_STATIC, 10, 10, 150, 10
-    EDITTEXT        IDC_INTERVAL_EDIT, 160, 10, 100, 14, ES_AUTOHSCROLL
-    LTEXT           "Image Size (%):", IDC_STATIC, 10, 40, 150, 10
-    EDITTEXT        IDC_IMAGE_SIZE_EDIT, 160, 40, 100, 14, ES_AUTOHSCROLL
-    LTEXT           "Image Quality:", IDC_STATIC, 10, 70, 150, 10
-    CONTROL         "", IDC_QUALITY_SLIDER, "msctls_trackbar32", TBS_AUTOTICKS | WS_TABSTOP, 160, 70, 100, 20
-    PUSHBUTTON      "Save", IDC_SAVE_BUTTON, 50, 140, 50, 14
-    PUSHBUTTON      "Cancel", IDC_CANCEL_BUTTON, 150, 140, 50, 14
+    GROUPBOX        "Capture Settings", IDC_STATIC, 10, 10, 280, 140
+    
+    LTEXT           "Capture Interval (1-3600 seconds):", IDC_STATIC, 20, 30, 160, 10
+    EDITTEXT        IDC_INTERVAL_EDIT, 190, 28, 90, 14, ES_AUTOHSCROLL | ES_NUMBER
+    
+    LTEXT           "Image Size (10-100%):", IDC_STATIC, 20, 60, 160, 10
+    EDITTEXT        IDC_IMAGE_SIZE_EDIT, 190, 58, 90, 14, ES_AUTOHSCROLL | ES_NUMBER
+    
+    LTEXT           "Image Quality:", IDC_STATIC, 20, 90, 65, 10
+    LTEXT           "", IDC_QUALITY_LABEL, 90, 90, 30, 10, SS_RIGHT
+    LTEXT           "%", IDC_STATIC, 125, 90, 10, 10
+    CONTROL         "", IDC_QUALITY_SLIDER, "msctls_trackbar32", 
+                    TBS_AUTOTICKS | TBS_TOOLTIPS | WS_TABSTOP, 
+                    190, 88, 90, 20
+    
+    DEFPUSHBUTTON   "&Save", IDOK, 85, 170, 60, 14
+    PUSHBUTTON      "&Cancel", IDCANCEL, 155, 170, 60, 14
 END
 
 IDI_WINDOWSSCREENLOGGERCPP ICON "icon.ico"
