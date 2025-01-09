@@ -56,20 +56,38 @@ std::wstring GetSavePath() {
 void CaptureScreen() {
     if (isSessionLocked) return;
 
+    // Get the total width and height of all screens
+    int totalWidth = 0;
+    int totalHeight = 0;
+    int screenCount = GetSystemMetrics(SM_CMONITORS);
+    for (int i = 0; i < screenCount; ++i) {
+        HMONITOR hMonitor = MonitorFromPoint(POINT{ totalWidth, 0 }, MONITOR_DEFAULTTONEAREST);
+        MONITORINFO mi = { sizeof(mi) };
+        GetMonitorInfo(hMonitor, &mi);
+        totalWidth += mi.rcMonitor.right - mi.rcMonitor.left;
+        totalHeight = max(totalHeight, mi.rcMonitor.bottom - mi.rcMonitor.top);
+    }
+
     HDC hdcScreen = GetDC(NULL);
     HDC hdcMem = CreateCompatibleDC(hdcScreen);
-    RECT rc;
-    GetClientRect(GetDesktopWindow(), &rc);
-    int width = rc.right - rc.left;
-    int height = rc.bottom - rc.top;
-
-    HBITMAP hbmScreen = CreateCompatibleBitmap(hdcScreen, width, height);
+    HBITMAP hbmScreen = CreateCompatibleBitmap(hdcScreen, totalWidth, totalHeight);
     SelectObject(hdcMem, hbmScreen);
-    BitBlt(hdcMem, 0, 0, width, height, hdcScreen, 0, 0, SRCCOPY);
+
+    // Capture each screen and combine into one image
+    int currentWidth = 0;
+    for (int i = 0; i < screenCount; ++i) {
+        HMONITOR hMonitor = MonitorFromPoint(POINT{ currentWidth, 0 }, MONITOR_DEFAULTTONEAREST);
+        MONITORINFO mi = { sizeof(mi) };
+        GetMonitorInfo(hMonitor, &mi);
+        int width = mi.rcMonitor.right - mi.rcMonitor.left;
+        int height = mi.rcMonitor.bottom - mi.rcMonitor.top;
+        BitBlt(hdcMem, currentWidth, 0, width, height, hdcScreen, mi.rcMonitor.left, mi.rcMonitor.top, SRCCOPY);
+        currentWidth += width;
+    }
 
     Gdiplus::Bitmap bitmap(hbmScreen, NULL);
-    int newWidth = width * imageSizePercentage / 100;
-    int newHeight = height * imageSizePercentage / 100;
+    int newWidth = totalWidth * imageSizePercentage / 100;
+    int newHeight = totalHeight * imageSizePercentage / 100;
     Gdiplus::Bitmap resizedBitmap(newWidth, newHeight, PixelFormat32bppARGB);
     Gdiplus::Graphics graphics(&resizedBitmap);
     graphics.DrawImage(&bitmap, 0, 0, newWidth, newHeight);
@@ -92,6 +110,7 @@ void CaptureScreen() {
     DeleteDC(hdcMem);
     ReleaseDC(NULL, hdcScreen);
 }
+
 
 void CALLBACK TimerProc(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
     CaptureScreen();
