@@ -152,12 +152,6 @@ public partial class MainForm : Form
 
 			using (Bitmap resizedBitmap = new Bitmap(screenBitmap, new Size(newWidth, newHeight)))
 			{
-				// Reduce color depth if needed
-				if (Settings.Default.ColorDepth < 32)
-				{
-					ReduceColorDepth(resizedBitmap, Settings.Default.ColorDepth);
-				}
-
 				// Save the resized image
 				string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
 				resizedBitmap.Save(filePath, jpegEncoder, GetEncoderParameters(Settings.Default.ImageQuality));
@@ -168,25 +162,6 @@ public partial class MainForm : Form
 			// Log the exception or show a message to the user
 			MessageBox.Show($"An error occurred while capturing the screen: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
-	}
-
-	private void ReduceColorDepth(Bitmap bitmap, int colorDepth)
-	{
-		if (colorDepth != 8 && colorDepth != 16)
-		{
-			throw new ArgumentException("Color depth must be 8 or 16 bits.");
-		}
-
-		PixelFormat format = colorDepth == 8 ? PixelFormat.Format8bppIndexed : PixelFormat.Format16bppRgb565;
-		Bitmap newBitmap = new Bitmap(bitmap.Width, bitmap.Height, format);
-
-		using (Graphics g = Graphics.FromImage(newBitmap))
-		{
-			g.DrawImage(bitmap, new Rectangle(0, 0, newBitmap.Width, newBitmap.Height));
-		}
-
-		bitmap.Dispose();
-		bitmap = newBitmap;
 	}
 
 	private static ImageCodecInfo GetEncoder(ImageFormat format)
