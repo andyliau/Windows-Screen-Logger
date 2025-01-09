@@ -133,22 +133,9 @@ public partial class MainForm : Form
 			screenGraphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
 
 			// Resize the image based on settings
-			int newWidth = bounds.Width;
-			int newHeight = bounds.Height;
-			if (Settings.Default.ImageSize != "Full")
-			{
-				switch (Settings.Default.ImageSize)
-				{
-					case "Half":
-						newWidth /= 2;
-						newHeight /= 2;
-						break;
-					case "Quarter":
-						newWidth /= 4;
-						newHeight /= 4;
-						break;
-				}
-			}
+			int percentage = Settings.Default.ImageSizePercentage;
+			int newWidth = bounds.Width * percentage / 100;
+			int newHeight = bounds.Height * percentage / 100;
 
 			using (Bitmap resizedBitmap = new Bitmap(screenBitmap, new Size(newWidth, newHeight)))
 			{

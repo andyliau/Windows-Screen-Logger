@@ -37,13 +37,13 @@ namespace WindowsScreenLogger {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Full")]
-        public string ImageSize {
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public int ImageSizePercentage {
             get {
-                return ((string)(this["ImageSize"]));
+                return ((int)(this["ImageSizePercentage"]));
             }
             set {
-                this["ImageSize"] = value;
+                this["ImageSizePercentage"] = value;
             }
         }
         

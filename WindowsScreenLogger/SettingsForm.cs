@@ -15,12 +15,13 @@ public partial class SettingsForm : Form
 		this.numericUpDownInterval = new NumericUpDown();
 		this.checkBoxStartWithWindows = new CheckBox();
 		this.label2 = new Label();
-		this.comboBoxImageSize = new ComboBox();
+		this.numericUpDownImageSize = new NumericUpDown();
 		this.label3 = new Label();
 		this.trackBarQuality = new TrackBar();
 		this.buttonSave = new Button();
 		this.buttonCancel = new Button();
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownInterval)).BeginInit();
+		((System.ComponentModel.ISupportInitialize)(this.numericUpDownImageSize)).BeginInit();
 		((System.ComponentModel.ISupportInitialize)(this.trackBarQuality)).BeginInit();
 		this.SuspendLayout();
 		// 
@@ -64,24 +65,21 @@ public partial class SettingsForm : Form
 		this.label2.Name = "label2";
 		this.label2.Size = new Size(90, 21);
 		this.label2.TabIndex = 3;
-		this.label2.Text = "Image Size:";
+		this.label2.Text = "Image Size (%):";
 		// 
-		// comboBoxImageSize
+		// numericUpDownImageSize
 		// 
-		this.comboBoxImageSize.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-		this.comboBoxImageSize.FormattingEnabled = true;
-		this.comboBoxImageSize.Items.AddRange(new object[] {
-				"Full",
-				"Half",
-				"Quarter"});
-		this.comboBoxImageSize.Location = new Point(120, 97);
-		this.comboBoxImageSize.Name = "comboBoxImageSize";
-		this.comboBoxImageSize.Size = new Size(120, 29);
-		this.comboBoxImageSize.TabIndex = 4;
-		this.comboBoxImageSize.SelectedIndex = 0; // Default to "Full"
-												  // 
-												  // label3
-												  // 
+		this.numericUpDownImageSize.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.numericUpDownImageSize.Location = new Point(250, 98);
+		this.numericUpDownImageSize.Minimum = 10;
+		this.numericUpDownImageSize.Maximum = 100;
+		this.numericUpDownImageSize.Name = "numericUpDownImageSize";
+		this.numericUpDownImageSize.Size = new Size(120, 29);
+		this.numericUpDownImageSize.TabIndex = 4;
+		this.numericUpDownImageSize.Value = new decimal(new int[] { 100, 0, 0, 0 }); // Default to 100%
+																					 // 
+																					 // label3
+																					 // 
 		this.label3.AutoSize = true;
 		this.label3.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
 		this.label3.Location = new Point(20, 140);
@@ -132,7 +130,7 @@ public partial class SettingsForm : Form
 		this.Controls.Add(this.buttonSave);
 		this.Controls.Add(this.trackBarQuality);
 		this.Controls.Add(this.label3);
-		this.Controls.Add(this.comboBoxImageSize);
+		this.Controls.Add(this.numericUpDownImageSize);
 		this.Controls.Add(this.label2);
 		this.Controls.Add(this.checkBoxStartWithWindows);
 		this.Controls.Add(this.numericUpDownInterval);
@@ -145,6 +143,7 @@ public partial class SettingsForm : Form
 		this.Text = "Settings";
 		this.Load += new EventHandler(this.SettingsForm_Load);
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownInterval)).EndInit();
+		((System.ComponentModel.ISupportInitialize)(this.numericUpDownImageSize)).EndInit();
 		((System.ComponentModel.ISupportInitialize)(this.trackBarQuality)).EndInit();
 		this.ResumeLayout(false);
 		this.PerformLayout();
@@ -154,7 +153,7 @@ public partial class SettingsForm : Form
 	private NumericUpDown numericUpDownInterval;
 	private CheckBox checkBoxStartWithWindows;
 	private Label label2;
-	private ComboBox comboBoxImageSize;
+	private NumericUpDown numericUpDownImageSize;
 	private Label label3;
 	private TrackBar trackBarQuality;
 	private Button buttonSave;
@@ -165,7 +164,7 @@ public partial class SettingsForm : Form
 		// Load settings
 		numericUpDownInterval.Value = Settings.Default.CaptureInterval;
 		checkBoxStartWithWindows.Checked = GetStartup();
-		comboBoxImageSize.SelectedItem = Settings.Default.ImageSize;
+		numericUpDownImageSize.Value = Settings.Default.ImageSizePercentage;
 		trackBarQuality.Value = Settings.Default.ImageQuality;
 	}
 
@@ -173,7 +172,7 @@ public partial class SettingsForm : Form
 	{
 		// Save settings
 		Settings.Default.CaptureInterval = (int)numericUpDownInterval.Value;
-		Settings.Default.ImageSize = comboBoxImageSize.SelectedItem.ToString();
+		Settings.Default.ImageSizePercentage = (int)numericUpDownImageSize.Value;
 		Settings.Default.ImageQuality = trackBarQuality.Value;
 		Settings.Default.Save();
 
