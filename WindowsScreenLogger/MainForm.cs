@@ -56,6 +56,7 @@ public partial class MainForm : Form
 		notifyIcon.Text = "Screen Logger";
 		notifyIcon.Icon = this.Icon;
 		notifyIcon.Visible = true;
+		notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
 		notifyIcon.ContextMenuStrip = new ContextMenuStrip();
 		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
 		notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
@@ -241,5 +242,10 @@ public partial class MainForm : Form
 			// Clear flag to indicate session is unlocked
 			isSessionLocked = false;
 		}
+	}
+
+	private void NotifyIcon_DoubleClick(object sender, EventArgs e)
+	{
+		OpenSaveFolder(sender, e);
 	}
 }
