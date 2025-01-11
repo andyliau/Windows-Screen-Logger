@@ -140,19 +140,8 @@ public partial class MainForm : Form
 		}
 		catch (Exception ex)
 		{
-			LogToEventLog(ex.ToString(), EventLogEntryType.Error);
-
 			// MessageBox.Show($"An error occurred while capturing the screen: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
-	}
-
-	static void LogToEventLog(string message, EventLogEntryType type)
-	{
-		if (!EventLog.SourceExists("WindowsScreenLogger"))
-		{
-			EventLog.CreateEventSource("WindowsScreenLogger", "Application");
-		}
-		EventLog.WriteEntry("WindowsScreenLogger", message, type);
 	}
 
 	static string GetSavePath()
