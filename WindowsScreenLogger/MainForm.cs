@@ -9,6 +9,7 @@ namespace WindowsScreenLogger;
 public partial class MainForm : Form
 {
 	private Timer captureTimer;
+	private Timer clearTimer;
 	private int captureInterval;
 	private Bitmap screenBitmap;
 	private Graphics screenGraphics;
@@ -16,6 +17,7 @@ public partial class MainForm : Form
 	private bool isSessionLocked;
 
 	private NotifyIcon notifyIcon;
+	private bool isRecording = false;
 
 	public MainForm()
 	{
@@ -27,6 +29,30 @@ public partial class MainForm : Form
 		SystemEvents.PowerModeChanged += OnPowerModeChanged;
 		SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 		SystemEvents.SessionSwitch += OnSessionSwitch;
+
+		// Create Screenshots directory if it doesn't exist
+		string screenshotsDirectory = Path.Combine(Application.StartupPath, "Screenshots");
+		if (!Directory.Exists(screenshotsDirectory))
+		{
+			Directory.CreateDirectory(screenshotsDirectory);
+		}
+
+		// Clean up old screenshots on startup
+		CleanOldScreenshots();
+
+		 // Initialize and start the clear timer
+		clearTimer = new Timer();
+		clearTimer.Interval = 60 * 60 * 1000; // 1 hour in milliseconds
+		clearTimer.Tick += (sender, e) => CleanOldScreenshots();
+		clearTimer.Start();
+
+		// Start recording automatically
+		StartRecording();
+
+		// Hide form on startup
+		this.WindowState = FormWindowState.Minimized;
+		this.ShowInTaskbar = false;
+		this.Hide();
 	}
 
 	private System.ComponentModel.IContainer components = null;
@@ -61,6 +87,8 @@ public partial class MainForm : Form
 		notifyIcon.ContextMenuStrip = new ContextMenuStrip();
 		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
 		notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
+		notifyIcon.ContextMenuStrip.Items.Add("Browse Screenshots", null, OnBrowseClick);
+		notifyIcon.ContextMenuStrip.Items.Add("Clean Old Screenshots", null, OnCleanClick);
 		notifyIcon.ContextMenuStrip.Items.Add("Exit", null, Exit);
 
 		// 
@@ -247,5 +275,77 @@ public partial class MainForm : Form
 	private void NotifyIcon_DoubleClick(object sender, EventArgs e)
 	{
 		OpenSaveFolder(sender, e);
+	}
+
+	private void OnBrowseClick(object? sender, EventArgs e)
+	{
+		string screenshotsDirectory = Path.Combine(Application.StartupPath, "Screenshots");
+		if (Directory.Exists(screenshotsDirectory))
+		{
+			Process.Start("explorer.exe", screenshotsDirectory);
+		}
+	}
+
+	private void OnCleanClick(object? sender, EventArgs e)
+	{
+		CleanOldScreenshots();
+		MessageBox.Show($"Old screenshots (older than {Settings.Default.ClearDays} days) have been removed.", 
+			"Cleanup Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+	}
+
+	private void CleanOldScreenshots()
+	{
+		string screenshotsPath = Path.Combine(Application.StartupPath, "Screenshots");
+		if (Directory.Exists(screenshotsPath))
+		{
+			var files = Directory.GetFiles(screenshotsPath);
+			int filesDeleted = 0;
+
+			foreach (var file in files)
+			{
+				var creationTime = File.GetCreationTime(file);
+				if ((DateTime.Now - creationTime).TotalDays > Settings.Default.ClearDays)
+				{
+					try
+					{
+						File.Delete(file);
+						filesDeleted++;
+					}
+					catch (Exception ex)
+					{
+						// Log error or silently continue
+						Debug.WriteLine($"Error deleting file {file}: {ex.Message}");
+					}
+				}
+			}
+
+			Debug.WriteLine($"Cleaned up {filesDeleted} screenshots older than {Settings.Default.ClearDays} days");
+		}
+	}
+
+	private void StartRecording()
+	{
+		if (!isRecording)
+		{
+			captureTimer.Start();
+			isRecording = true;
+			UpdateStatus("Recording started");
+		}
+	}
+
+	private void StopRecording()
+	{
+		if (isRecording)
+		{
+			captureTimer.Stop();
+			isRecording = false;
+			UpdateStatus("Recording stopped");
+		}
+	}
+
+	private void UpdateStatus(string message)
+	{
+		// Update status in UI or log
+		Debug.WriteLine(message);
 	}
 }

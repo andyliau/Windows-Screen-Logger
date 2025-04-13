@@ -18,11 +18,14 @@ public partial class SettingsForm : Form
 		this.numericUpDownImageSize = new NumericUpDown();
 		this.label3 = new Label();
 		this.trackBarQuality = new TrackBar();
+		this.labelClearDays = new Label();
+		this.numericUpDownClearDays = new NumericUpDown();
 		this.buttonSave = new Button();
 		this.buttonCancel = new Button();
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownInterval)).BeginInit();
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownImageSize)).BeginInit();
 		((System.ComponentModel.ISupportInitialize)(this.trackBarQuality)).BeginInit();
+		((System.ComponentModel.ISupportInitialize)(this.numericUpDownClearDays)).BeginInit();
 		this.SuspendLayout();
 		// 
 		// label1
@@ -99,13 +102,34 @@ public partial class SettingsForm : Form
 		this.trackBarQuality.Size = new Size(230, 45);
 		this.trackBarQuality.TabIndex = 6;
 		// 
+		// labelClearDays
+		// 
+		this.labelClearDays.AutoSize = true;
+		this.labelClearDays.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.labelClearDays.Location = new Point(20, 190);
+		this.labelClearDays.Name = "labelClearDays";
+		this.labelClearDays.MaximumSize = new Size(300, 0); // Set maximum width to 300px
+		this.labelClearDays.TabIndex = 7;
+		this.labelClearDays.Text = "Clear screenshots older than (days):";
+		// 
+		// numericUpDownClearDays
+		// 
+		this.numericUpDownClearDays.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.numericUpDownClearDays.Location = new Point(250, 188); // Match the new label position
+		this.numericUpDownClearDays.Maximum = 365;
+		this.numericUpDownClearDays.Minimum = 1;
+		this.numericUpDownClearDays.Name = "numericUpDownClearDays";
+		this.numericUpDownClearDays.Size = new Size(120, 29);
+		this.numericUpDownClearDays.TabIndex = 8;
+		this.numericUpDownClearDays.Value = new decimal(new int[] { 30, 0, 0, 0 });
+		// 
 		// buttonSave
 		// 
 		this.buttonSave.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-		this.buttonSave.Location = new Point(100, 200);
+		this.buttonSave.Location = new Point(100, 250);
 		this.buttonSave.Name = "buttonSave";
 		this.buttonSave.Size = new Size(100, 30);
-		this.buttonSave.TabIndex = 7;
+		this.buttonSave.TabIndex = 9;
 		this.buttonSave.Text = "Save";
 		this.buttonSave.UseVisualStyleBackColor = true;
 		this.buttonSave.Click += new EventHandler(this.ButtonSave_Click);
@@ -113,10 +137,10 @@ public partial class SettingsForm : Form
 		// buttonCancel
 		// 
 		this.buttonCancel.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-		this.buttonCancel.Location = new Point(220, 200);
+		this.buttonCancel.Location = new Point(220, 250);
 		this.buttonCancel.Name = "buttonCancel";
 		this.buttonCancel.Size = new Size(100, 30);
-		this.buttonCancel.TabIndex = 8;
+		this.buttonCancel.TabIndex = 10;
 		this.buttonCancel.Text = "Cancel";
 		this.buttonCancel.UseVisualStyleBackColor = true;
 		this.buttonCancel.Click += new EventHandler(this.ButtonCancel_Click);
@@ -125,7 +149,9 @@ public partial class SettingsForm : Form
 		// 
 		this.AutoScaleDimensions = new SizeF(7F, 15F);
 		this.AutoScaleMode = AutoScaleMode.Font;
-		this.ClientSize = new Size(400, 250);
+		this.ClientSize = new Size(400, 320); // Increase form height to accommodate the adjusted controls
+		this.Controls.Add(this.numericUpDownClearDays);
+		this.Controls.Add(this.labelClearDays);
 		this.Controls.Add(this.buttonCancel);
 		this.Controls.Add(this.buttonSave);
 		this.Controls.Add(this.trackBarQuality);
@@ -145,6 +171,7 @@ public partial class SettingsForm : Form
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownInterval)).EndInit();
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownImageSize)).EndInit();
 		((System.ComponentModel.ISupportInitialize)(this.trackBarQuality)).EndInit();
+		((System.ComponentModel.ISupportInitialize)(this.numericUpDownClearDays)).EndInit();
 		this.ResumeLayout(false);
 		this.PerformLayout();
 	}
@@ -156,6 +183,8 @@ public partial class SettingsForm : Form
 	private NumericUpDown numericUpDownImageSize;
 	private Label label3;
 	private TrackBar trackBarQuality;
+	private Label labelClearDays;
+	private NumericUpDown numericUpDownClearDays;
 	private Button buttonSave;
 	private Button buttonCancel;
 
@@ -166,6 +195,7 @@ public partial class SettingsForm : Form
 		checkBoxStartWithWindows.Checked = GetStartup();
 		numericUpDownImageSize.Value = Settings.Default.ImageSizePercentage;
 		trackBarQuality.Value = Settings.Default.ImageQuality;
+		numericUpDownClearDays.Value = Settings.Default.ClearDays;
 	}
 
 	private void ButtonSave_Click(object sender, EventArgs e)
@@ -174,6 +204,7 @@ public partial class SettingsForm : Form
 		Settings.Default.CaptureInterval = (int)numericUpDownInterval.Value;
 		Settings.Default.ImageSizePercentage = (int)numericUpDownImageSize.Value;
 		Settings.Default.ImageQuality = trackBarQuality.Value;
+		Settings.Default.ClearDays = (int)numericUpDownClearDays.Value;
 		Settings.Default.Save();
 
 		// Set or remove startup entry

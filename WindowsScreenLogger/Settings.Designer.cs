@@ -58,5 +58,17 @@ namespace WindowsScreenLogger {
                 this["ImageQuality"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("30")]
+        public int ClearDays {
+            get {
+                return ((int)(this["ClearDays"]));
+            }
+            set {
+                this["ClearDays"] = value;
+            }
+        }
     }
 }
