@@ -30,13 +30,6 @@ public partial class MainForm : Form
 		SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 		SystemEvents.SessionSwitch += OnSessionSwitch;
 
-		// Create Screenshots directory if it doesn't exist
-		string screenshotsDirectory = Path.Combine(Application.StartupPath, "Screenshots");
-		if (!Directory.Exists(screenshotsDirectory))
-		{
-			Directory.CreateDirectory(screenshotsDirectory);
-		}
-
 		// Clean up old screenshots on startup
 		CleanOldScreenshots();
 
@@ -45,9 +38,6 @@ public partial class MainForm : Form
 		clearTimer.Interval = 60 * 60 * 1000; // 1 hour in milliseconds
 		clearTimer.Tick += (sender, e) => CleanOldScreenshots();
 		clearTimer.Start();
-
-		// Start recording automatically
-		StartRecording();
 
 		// Hide form on startup
 		this.WindowState = FormWindowState.Minimized;
@@ -85,9 +75,8 @@ public partial class MainForm : Form
 		notifyIcon.Visible = true;
 		notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
 		notifyIcon.ContextMenuStrip = new ContextMenuStrip();
-		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
 		notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
-		notifyIcon.ContextMenuStrip.Items.Add("Browse Screenshots", null, OnBrowseClick);
+		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
 		notifyIcon.ContextMenuStrip.Items.Add("Clean Old Screenshots", null, OnCleanClick);
 		notifyIcon.ContextMenuStrip.Items.Add("Exit", null, Exit);
 
@@ -172,11 +161,11 @@ public partial class MainForm : Form
 		}
 	}
 
+	static string RootPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "WindowsScreenLogger");
 	static string GetSavePath()
 	{
 		var path = Path.Combine(
-			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-			"WindowsScreenLogger",
+			RootPath,
 			DateTime.Now.ToString("yyyy-MM-dd"));
 		Directory.CreateDirectory(path);
 		return path;
@@ -217,7 +206,7 @@ public partial class MainForm : Form
 		try
 		{
 			var savePath = GetSavePath();
-			System.Diagnostics.Process.Start("explorer.exe", savePath);
+			Process.Start("explorer.exe", savePath);
 		}
 		catch (Exception ex)
 		{
@@ -277,15 +266,6 @@ public partial class MainForm : Form
 		OpenSaveFolder(sender, e);
 	}
 
-	private void OnBrowseClick(object? sender, EventArgs e)
-	{
-		string screenshotsDirectory = Path.Combine(Application.StartupPath, "Screenshots");
-		if (Directory.Exists(screenshotsDirectory))
-		{
-			Process.Start("explorer.exe", screenshotsDirectory);
-		}
-	}
-
 	private void OnCleanClick(object? sender, EventArgs e)
 	{
 		CleanOldScreenshots();
@@ -295,52 +275,33 @@ public partial class MainForm : Form
 
 	private void CleanOldScreenshots()
 	{
-		string screenshotsPath = Path.Combine(Application.StartupPath, "Screenshots");
-		if (Directory.Exists(screenshotsPath))
+		if (!Directory.Exists(RootPath))
 		{
-			var files = Directory.GetFiles(screenshotsPath);
-			int filesDeleted = 0;
+			return;
+		}
 
-			foreach (var file in files)
+		var subDirectories = Directory.GetDirectories(RootPath);
+		int dirDeleted = 0;
+
+		foreach (var directory in subDirectories)
+		{
+			var creationTime = Directory.GetCreationTime(directory);
+			if ((DateTime.Now - creationTime).TotalDays > Settings.Default.ClearDays)
 			{
-				var creationTime = File.GetCreationTime(file);
-				if ((DateTime.Now - creationTime).TotalDays > Settings.Default.ClearDays)
+				try
 				{
-					try
-					{
-						File.Delete(file);
-						filesDeleted++;
-					}
-					catch (Exception ex)
-					{
-						// Log error or silently continue
-						Debug.WriteLine($"Error deleting file {file}: {ex.Message}");
-					}
+					Directory.Delete(directory, true); // Use true to delete directories and their contents
+					dirDeleted++;
+				}
+				catch (Exception ex)
+				{
+					// Log error or silently continue
+					UpdateStatus($"Error deleting file {directory}: {ex.Message}");
 				}
 			}
-
-			Debug.WriteLine($"Cleaned up {filesDeleted} screenshots older than {Settings.Default.ClearDays} days");
 		}
-	}
 
-	private void StartRecording()
-	{
-		if (!isRecording)
-		{
-			captureTimer.Start();
-			isRecording = true;
-			UpdateStatus("Recording started");
-		}
-	}
-
-	private void StopRecording()
-	{
-		if (isRecording)
-		{
-			captureTimer.Stop();
-			isRecording = false;
-			UpdateStatus("Recording stopped");
-		}
+		UpdateStatus($"Cleaned up {dirDeleted} screenshots folders older than {Settings.Default.ClearDays} days");
 	}
 
 	private void UpdateStatus(string message)
