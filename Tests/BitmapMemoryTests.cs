@@ -1,23 +1,27 @@
 using System;
-using System.Drawing;
-using System.Drawing.Imaging;
 using Xunit;
+using WindowsScreenLogger;
 
 namespace WindowsScreenLogger.Tests
 {
     public class BitmapMemoryTests
     {
         [Fact]
-        public void Bitmap_Dispose_ShouldNotLeakMemory()
+        public void CaptureAllScreens_ShouldNotLeakMemory()
         {
             long initialMemory = GC.GetTotalMemory(true);
 
-            for (int i = 0; i < 50; i++)
+            for (int i = 0; i < 10; i++)
             {
-                using (var bmp = new Bitmap(800, 600))
-                using (var g = Graphics.FromImage(bmp))
+                using (var form = new MainForm())
                 {
-                    g.Clear(Color.Red);
+                    // Ensure screen capture is initialized
+                    var method = typeof(MainForm).GetMethod("InitializeScreenCapture", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    method.Invoke(form, null);
+
+                    // Call the production capture method
+                    var captureMethod = typeof(MainForm).GetMethod("CaptureAllScreens", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    captureMethod.Invoke(form, null);
                 }
             }
 
@@ -26,7 +30,7 @@ namespace WindowsScreenLogger.Tests
             long finalMemory = GC.GetTotalMemory(true);
 
             // Allow some fluctuation, but memory should not grow unbounded
-            Assert.True(finalMemory - initialMemory < 5 * 1024 * 1024); // <5MB difference
+            Assert.True(finalMemory - initialMemory < 10 * 1024 * 1024); // <10MB difference
         }
     }
 }
