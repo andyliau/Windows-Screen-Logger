@@ -165,6 +165,8 @@ public partial class MainForm : Form
 		{
 			// MessageBox.Show($"An error occurred while capturing the screen: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
+
+		GC.Collect();
 	}
 
 	static string RootPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "WindowsScreenLogger");
