@@ -1,8 +1,5 @@
 using System;
 using Xunit;
-using WindowsScreenLogger;
-using System.Drawing;
-using System.IO;
 
 namespace WindowsScreenLogger.Tests
 {
@@ -49,25 +46,6 @@ differenceAt20: {differenceAt20.beforeCollection}");
 				differenceAfterCollection = Math.Max(differenceAfterCollection, 0); // Ensure no negative memory difference
 				return (differenceBeforeCollection, differenceAfterCollection);
 			}
-		}
-
-		static void DummyTest(int runTimes)
-		{
-			for (int i = 0; i < 5*runTimes; i++)
-			{
-				using var bmp = new Bitmap(1000, 1000);
-				using var gfx = Graphics.FromImage(bmp);
-				gfx.Clear(Color.Red);
-				var fileName = "test.png";
-				if (File.Exists(fileName))
-				{
-					File.Delete(fileName);
-				}
-
-				using Bitmap resizedBitmap = new Bitmap(bmp, new Size(500, 500)); // It leaks as soon as size is larger and resizing is happening here
-			}
-			GC.Collect();
-			GC.WaitForFullGCComplete();
 		}
 	}
 }
