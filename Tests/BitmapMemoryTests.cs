@@ -35,8 +35,8 @@ differenceAt20: {differenceAt20.beforeCollection}");
 				var initialMemory = GC.GetTotalMemory(true);
 				for (int i = 0; i < runTimes; i++)
 				{
-					//captureMethod.Invoke(form, null);
-					DummyTest(runTimes); // Dummy test to simulate memory usage
+					captureMethod.Invoke(form, null);
+					//DummyTest(runTimes); // Dummy test to simulate memory usage
 				}
 
 				var adjustment = runTimes * 200; // Adjust this value based on expected memory usage per capture

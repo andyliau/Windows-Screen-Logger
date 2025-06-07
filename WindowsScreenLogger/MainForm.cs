@@ -1,6 +1,6 @@
 using System.Diagnostics;
+using SkiaSharp;
 using System.Drawing.Imaging;
-using System.Reflection;
 using Microsoft.Win32;
 using Timer = System.Windows.Forms.Timer;
 
@@ -21,7 +21,6 @@ public partial class MainForm : Form
 	{
 		InitializeComponent();
 		Configure();
-		jpegEncoder = GetEncoder(ImageFormat.Jpeg);
 
 		SystemEvents.PowerModeChanged += OnPowerModeChanged;
 		SystemEvents.SessionSwitch += OnSessionSwitch;
@@ -140,12 +139,27 @@ public partial class MainForm : Form
 			int newWidth = bounds.Width * percentage / 100;
 			int newHeight = bounds.Height * percentage / 100;
 
-			using Bitmap resizedBitmap = new Bitmap(screenBitmap, new Size(newWidth, newHeight));
+			// Convert System.Drawing.Bitmap to SkiaSharp.SKBitmap
+			using var ms = new MemoryStream();
+			screenBitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+			ms.Seek(0, SeekOrigin.Begin);
+			using var skBitmap = SKBitmap.Decode(ms);
 
-			// Save the resized image
+			// Resize with SkiaSharp using SKSamplingOptions
+			var samplingOptions = new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None);
+			using var resized = skBitmap.Resize(new SKImageInfo(newWidth, newHeight), samplingOptions);
+			if (resized == null)
+				throw new Exception("SkiaSharp resize failed.");
+
+			using var image = SKImage.FromBitmap(resized);
+
+			// Save as JPEG with quality parameter
+			var quality = Settings.Default.ImageQuality;
+			var data = image.Encode(SKEncodedImageFormat.Jpeg, quality);
+
 			string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
-			using var encoderParameter = GetEncoderParameters(Settings.Default.ImageQuality);
-			resizedBitmap.Save(filePath, jpegEncoder, GetEncoderParameters(Settings.Default.ImageQuality));
+			using var fileStream = File.OpenWrite(filePath);
+			data.SaveTo(fileStream);
 		}
 		catch (Exception ex)
 		{
@@ -161,26 +175,6 @@ public partial class MainForm : Form
 			DateTime.Now.ToString("yyyy-MM-dd"));
 		Directory.CreateDirectory(path);
 		return path;
-	}
-
-	private static ImageCodecInfo GetEncoder(ImageFormat format)
-	{
-		ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
-		foreach (ImageCodecInfo codec in codecs)
-		{
-			if (codec.FormatID == format.Guid)
-			{
-				return codec;
-			}
-		}
-		return null;
-	}
-
-	private static EncoderParameters GetEncoderParameters(long quality)
-	{
-		EncoderParameters encoderParameters = new EncoderParameters(1);
-		encoderParameters.Param[0] = new EncoderParameter(Encoder.Quality, quality);
-		return encoderParameters;
 	}
 
 	private void ShowSettings(object sender, EventArgs e)
