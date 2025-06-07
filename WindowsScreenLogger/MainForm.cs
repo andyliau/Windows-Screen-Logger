@@ -125,6 +125,8 @@ public partial class MainForm : Form
 		var savePath = GetSavePath();
 		try
 		{
+			this.captureTimer.Stop();
+
 			// Calculate the total size of the virtual screen
 			Rectangle bounds = SystemInformation.VirtualScreen;
 
@@ -136,6 +138,7 @@ public partial class MainForm : Form
 
 			// Resize the image based on settings
 			int percentage = Settings.Default.ImageSizePercentage;
+			bool resizeNeeded = percentage != 100;
 			int newWidth = bounds.Width * percentage / 100;
 			int newHeight = bounds.Height * percentage / 100;
 
@@ -147,26 +150,43 @@ public partial class MainForm : Form
 
 			// Resize with SkiaSharp using SKSamplingOptions
 			var samplingOptions = new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None);
-			using var resized = skBitmap.Resize(new SKImageInfo(newWidth, newHeight), samplingOptions);
-			if (resized == null)
-				throw new Exception("SkiaSharp resize failed.");
+			SKImage image = null;
+			try
+			{
+				if (resizeNeeded)
+				{
+					using var resized = skBitmap.Resize(new SKImageInfo(newWidth, newHeight), samplingOptions);
+					image = SKImage.FromBitmap(resized);
+				}
+				else
+				{
+					image = SKImage.FromBitmap(skBitmap);
+				}
 
-			using var image = SKImage.FromBitmap(resized);
+				// Save as JPEG with quality parameter
+				var quality = Settings.Default.ImageQuality;
+				var data = image.Encode(SKEncodedImageFormat.Jpeg, quality);
 
-			// Save as JPEG with quality parameter
-			var quality = Settings.Default.ImageQuality;
-			var data = image.Encode(SKEncodedImageFormat.Jpeg, quality);
-
-			string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
-			using var fileStream = File.OpenWrite(filePath);
-			data.SaveTo(fileStream);
+				string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
+				using var fileStream = File.OpenWrite(filePath);
+				data.SaveTo(fileStream);
+			}
+			finally
+			{
+				image?.Dispose();
+			}
 		}
 		catch (Exception ex)
 		{
 			// MessageBox.Show($"An error occurred while capturing the screen: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
+		finally
+		{
+			this.captureTimer.Start();
+		}
 
 		GC.Collect();
+		Application.DoEvents();
 	}
 
 	static string RootPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "WindowsScreenLogger");
