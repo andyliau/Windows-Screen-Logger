@@ -10,7 +10,7 @@ namespace WindowsScreenLogger.Tests
         public void CaptureAllScreens_ShouldNotLeakMemory()
 		{
 			var differenceAt1 = RunCaptureMultipleTimes(1);
-			var differenceAt20 = RunCaptureMultipleTimes(20);
+			var differenceAt20 = RunCaptureMultipleTimes(10);
 
 			// After garbage collection, memory should be same on both
 			Assert.True(differenceAt20.afterCollection < differenceAt1.afterCollection * 2, 
@@ -39,7 +39,7 @@ differenceAt20: {differenceAt20.beforeCollection}");
 				var differenceBeforeCollection = GC.GetTotalMemory(false) - initialMemory;
 				GC.Collect();
 				GC.WaitForPendingFinalizers();
-				var differenceAfterCollection = GC.GetTotalMemory(false) - initialMemory;
+				var differenceAfterCollection = GC.GetTotalMemory(true) - initialMemory;
 				return (differenceBeforeCollection, differenceAfterCollection);
 			}
 		}

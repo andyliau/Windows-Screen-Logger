@@ -11,8 +11,6 @@ public partial class MainForm : Form
 	private Timer captureTimer;
 	private Timer clearTimer;
 	private int captureInterval;
-	private Bitmap screenBitmap;
-	private Graphics screenGraphics;
 	private ImageCodecInfo jpegEncoder;
 	private bool isSessionLocked;
 
@@ -23,11 +21,9 @@ public partial class MainForm : Form
 	{
 		InitializeComponent();
 		ConfigureCaptureTimer();
-		InitializeScreenCapture();
 		jpegEncoder = GetEncoder(ImageFormat.Jpeg);
 
 		SystemEvents.PowerModeChanged += OnPowerModeChanged;
-		SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 		SystemEvents.SessionSwitch += OnSessionSwitch;
 
 		// Clean up old screenshots on startup
@@ -51,7 +47,6 @@ public partial class MainForm : Form
 		if (disposing)
 		{
 			SystemEvents.PowerModeChanged -= OnPowerModeChanged;
-			SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
 			SystemEvents.SessionSwitch -= OnSessionSwitch;
 			components?.Dispose();
 		}
@@ -117,12 +112,6 @@ public partial class MainForm : Form
 		captureTimer.Start();
 	}
 
-	private void InitializeScreenCapture()
-	{
-		Rectangle bounds = SystemInformation.VirtualScreen;
-		screenBitmap = new Bitmap(bounds.Width, bounds.Height);
-		screenGraphics = Graphics.FromImage(screenBitmap);
-	}
 
 	private void CaptureTimer_Tick(object sender, EventArgs e)
 	{
@@ -140,6 +129,9 @@ public partial class MainForm : Form
 			// Calculate the total size of the virtual screen
 			Rectangle bounds = SystemInformation.VirtualScreen;
 
+			using var screenBitmap = new Bitmap(bounds.Width, bounds.Height);
+			using var screenGraphics = Graphics.FromImage(screenBitmap);
+
 			// Capture the entire virtual screen
 			screenGraphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
 
@@ -148,12 +140,11 @@ public partial class MainForm : Form
 			int newWidth = bounds.Width * percentage / 100;
 			int newHeight = bounds.Height * percentage / 100;
 
-			using (Bitmap resizedBitmap = new Bitmap(screenBitmap, new Size(newWidth, newHeight)))
-			{
-				// Save the resized image
-				string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
-				resizedBitmap.Save(filePath, jpegEncoder, GetEncoderParameters(Settings.Default.ImageQuality));
-			}
+			using Bitmap resizedBitmap = new Bitmap(screenBitmap, new Size(newWidth, newHeight));
+
+			// Save the resized image
+			string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
+			resizedBitmap.Save(filePath, jpegEncoder, GetEncoderParameters(Settings.Default.ImageQuality));
 		}
 		catch (Exception ex)
 		{
@@ -222,8 +213,6 @@ public partial class MainForm : Form
 			notifyIcon.Visible = false;
 			notifyIcon.Dispose();
 		}
-		screenGraphics?.Dispose();
-		screenBitmap?.Dispose();
 		Application.Exit();
 	}
 
@@ -239,12 +228,6 @@ public partial class MainForm : Form
 			// Restart the capture timer when the system resumes
 			captureTimer?.Start();
 		}
-	}
-
-	private void OnDisplaySettingsChanged(object sender, EventArgs e)
-	{
-		// Reinitialize screen capture when display settings change
-		InitializeScreenCapture();
 	}
 
 	private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
