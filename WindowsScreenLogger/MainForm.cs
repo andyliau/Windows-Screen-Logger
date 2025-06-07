@@ -20,7 +20,7 @@ public partial class MainForm : Form
 	public MainForm()
 	{
 		InitializeComponent();
-		ConfigureCaptureTimer();
+		Configure();
 		jpegEncoder = GetEncoder(ImageFormat.Jpeg);
 
 		SystemEvents.PowerModeChanged += OnPowerModeChanged;
@@ -91,7 +91,7 @@ public partial class MainForm : Form
 		this.Hide();
 	}
 
-	private void ConfigureCaptureTimer()
+	private void Configure()
 	{
 		captureInterval = Settings.Default.CaptureInterval;
 		if (captureInterval <= 0)
@@ -144,6 +144,7 @@ public partial class MainForm : Form
 
 			// Save the resized image
 			string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
+			using var encoderParameter = GetEncoderParameters(Settings.Default.ImageQuality);
 			resizedBitmap.Save(filePath, jpegEncoder, GetEncoderParameters(Settings.Default.ImageQuality));
 		}
 		catch (Exception ex)
@@ -188,7 +189,7 @@ public partial class MainForm : Form
 		settingsForm.Icon = this.Icon;
 		if (settingsForm.ShowDialog() == DialogResult.OK)
 		{
-			ConfigureCaptureTimer(); // Reconfigure the timer with the new interval
+			Configure();
 		}
 	}
 
