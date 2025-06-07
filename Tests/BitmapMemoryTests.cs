@@ -8,29 +8,40 @@ namespace WindowsScreenLogger.Tests
     {
         [Fact]
         public void CaptureAllScreens_ShouldNotLeakMemory()
-        {
-            long initialMemory = GC.GetTotalMemory(true);
+		{
+			var differenceAt1 = RunCaptureMultipleTimes(1);
+			var differenceAt20 = RunCaptureMultipleTimes(20);
 
-            for (int i = 0; i < 10; i++)
-            {
-                using (var form = new MainForm())
-                {
-                    // Ensure screen capture is initialized
-                    var method = typeof(MainForm).GetMethod("InitializeScreenCapture", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    method.Invoke(form, null);
+			// After garbage collection, memory should be same on both
+			Assert.True(differenceAt20.afterCollection < differenceAt1.afterCollection * 2, 
+				$@"Memory leak detected: Memory usage after garbage collection increased significantly after multiple captures.
+differenceAt1: {differenceAt1.afterCollection}
+differenceAt20: {differenceAt20.afterCollection}");
 
-                    // Call the production capture method
-                    var captureMethod = typeof(MainForm).GetMethod("CaptureAllScreens", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    captureMethod.Invoke(form, null);
-                }
-            }
+			Assert.True(differenceAt20.beforeCollection < differenceAt1.beforeCollection * 2,
+				@$"Memory leak detected: Memory usage before garbage collection increased significantly after multiple captures.
+differenceAt1: {differenceAt1.beforeCollection}
+differenceAt20: {differenceAt20.beforeCollection}");
+		}
 
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            long finalMemory = GC.GetTotalMemory(true);
+		private static (long beforeCollection, long afterCollection) RunCaptureMultipleTimes(int runTimes)
+		{
+			using (var form = new MainForm())
+			{
+				var initialMemory = GC.GetTotalMemory(true);
+				var captureMethod = typeof(MainForm).GetMethod("CaptureAllScreens", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-            // Allow some fluctuation, but memory should not grow unbounded
-            Assert.True(finalMemory - initialMemory < 10 * 1024 * 1024); // <10MB difference
-        }
-    }
+				for (int i = 0; i < runTimes; i++)
+				{
+					captureMethod.Invoke(form, null);
+				}
+
+				var differenceBeforeCollection = GC.GetTotalMemory(false) - initialMemory;
+				GC.Collect();
+				GC.WaitForPendingFinalizers();
+				var differenceAfterCollection = GC.GetTotalMemory(false) - initialMemory;
+				return (differenceBeforeCollection, differenceAfterCollection);
+			}
+		}
+	}
 }
