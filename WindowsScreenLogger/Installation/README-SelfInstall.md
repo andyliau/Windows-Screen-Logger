@@ -3,24 +3,40 @@
 ## Overview
 The Windows Screen Logger now includes a comprehensive self-installation system that provides a professional installation experience similar to commercial applications.
 
+## Architecture
+
+The installation system is organized into modular components:
+
+### Installation Namespace (`WindowsScreenLogger.Installation`)
+- **SelfInstaller** - Orchestrates installation/uninstallation process
+- **WindowsAppsRegistry** - Handles Windows Apps & Features registration
+- **StartupRegistry** - Manages Windows startup functionality  
+- **UninstallScriptManager** - Executes delayed deletion scripts
+- **Embedded Scripts** - PowerShell and Batch uninstallation scripts
+
+### Main Components
+- All installation-related files are located in the **Installation/** folder
+- Clean separation between core application and installation logic
+
 ## Features
 
 ### Automatic Installation Prompt
-- When the application is run from any location other than Program Files, it automatically prompts the user for installation
+- When the application is run from any location other than the user's AppData folder, it automatically prompts the user for installation
 - Users can choose to install or continue running from the current location
 
 ### Installation Process
-- **Elevation Handling**: Automatically requests administrator privileges when needed
-- **Program Files Installation**: Copies the executable to `C:\Program Files\Windows Screen Logger\`
-- **Windows Apps Registration**: Registers the application in Windows Apps & Features
+- **No Admin Required**: Installation works entirely within the user's folder
+- **User Folder Installation**: Copies the executable to `%LOCALAPPDATA%\Windows Screen Logger\`
+- **Windows Apps Registration**: Registers the application in Windows Apps & Features (current user)
 - **Startup Integration**: Properly configures startup with Windows using the installed location
 - **Automatic Restart**: Launches the installed version after successful installation
 
 ### Windows Apps Integration
-- Appears in Windows Settings > Apps & features
+- Appears in Windows Settings > Apps & features (for current user)
 - Includes proper metadata (version, publisher, install date, size)
 - Provides standard uninstall functionality
 - Supports both regular and quiet uninstallation
+- No administrator privileges required for registration or uninstallation
 
 ### Uninstallation
 - **Context Menu Option**: Right-click system tray icon > Uninstall (when running from installed location)
@@ -34,19 +50,19 @@ The Windows Screen Logger now includes a comprehensive self-installation system 
 
 | Argument | Description |
 |----------|-------------|
-| `/install` | Forces installation (requires admin privileges) |
-| `/uninstall` | Uninstalls the application (requires admin privileges) |
+| `/install` | Forces installation (no admin privileges required) |
+| `/uninstall` | Uninstalls the application (no admin privileges required) |
 | `/uninstall /quiet` | Silent uninstallation without user prompts |
 
 ## Installation Locations
 
 ### Executable Location
-- **Installed**: `C:\Program Files\Windows Screen Logger\WindowsScreenLogger.exe`
+- **Installed**: `%LOCALAPPDATA%\Windows Screen Logger\WindowsScreenLogger.exe`
 - **Screenshots**: `%USERPROFILE%\WindowsScreenLogger\` (unchanged)
 
 ### Registry Entries
 - **Startup**: `HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
-- **Apps Registration**: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B3E7C6A8-9F2D-4E5A-B1C3-8D7F6E9A2B4C}`
+- **Apps Registration**: `HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B3E7C6A8-9F2D-4E5A-B1C3-8D7F6E9A2B4C}`
 
 ## User Experience
 
@@ -54,9 +70,8 @@ The Windows Screen Logger now includes a comprehensive self-installation system 
 1. Application starts normally
 2. Shows installation prompt dialog
 3. If user accepts:
-   - Requests admin privileges
-   - Copies to Program Files
-   - Registers in Windows Apps
+   - Copies to user's AppData folder
+   - Registers in Windows Apps (current user)
    - Restarts from installed location
 
 ### Subsequent Runs (from installed location)
@@ -72,9 +87,9 @@ The Windows Screen Logger now includes a comprehensive self-installation system 
 ## Technical Implementation
 
 ### Security
-- Proper UAC elevation handling
-- Administrator privilege checks
+- No UAC elevation required - works entirely in user space
 - Secure file operations with error handling
+- User-scoped registry operations only
 
 ### Reliability
 - Mutex-based single instance enforcement
@@ -84,9 +99,11 @@ The Windows Screen Logger now includes a comprehensive self-installation system 
 ### Self-Deletion During Uninstall
 - **Problem**: Applications cannot delete themselves while running
 - **Solution**: Delayed deletion using external scripts that remove the entire parent folder
+- **Script Management**: Organized scripts in dedicated Installation folder
+- **Embedded Resources**: Scripts embedded in executable for reliability
 - **Primary Method**: PowerShell script with multiple fallback strategies
 - **Fallback Methods**: Batch file execution and individual file deletion
-- **Complete Removal**: Ensures the entire `C:\Program Files\Windows Screen Logger\` folder is removed
+- **Complete Removal**: Ensures the entire `%LOCALAPPDATA%\Windows Screen Logger\` folder is removed
 - **Safety Checks**: Prevents uninstallation when not actually installed
 - **Verification**: Includes methods to verify complete removal of installation directory
 
@@ -98,18 +115,18 @@ The Windows Screen Logger now includes a comprehensive self-installation system 
 ## Troubleshooting
 
 ### Uninstall Issues
-If you encounter "Access denied" errors during uninstallation:
+If you encounter any errors during uninstallation:
 1. The application uses delayed deletion mechanisms
 2. Files are removed after the application fully exits
-3. If manual cleanup is needed, delete: `C:\Program Files\Windows Screen Logger\`
+3. If manual cleanup is needed, delete: `%LOCALAPPDATA%\Windows Screen Logger\`
 
 ### Manual Uninstall
 If automatic uninstall fails:
-1. Delete the entire folder: `C:\Program Files\Windows Screen Logger\` (including all contents)
-2. Remove registry key: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B3E7C6A8-9F2D-4E5A-B1C3-8D7F6E9A2B4C}`
+1. Delete the entire folder: `%LOCALAPPDATA%\Windows Screen Logger\` (including all contents)
+2. Remove registry key: `HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B3E7C6A8-9F2D-4E5A-B1C3-8D7F6E9A2B4C}`
 3. Remove startup entry: `HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\Windows Screen Logger`
 
-**Note**: The automatic uninstaller is designed to remove the complete parent folder `Windows Screen Logger` from Program Files, not just the executable file.
+**Note**: The automatic uninstaller is designed to remove the complete parent folder `Windows Screen Logger` from LocalAppData, not just the executable file.
 
 ## Building and Deployment
 

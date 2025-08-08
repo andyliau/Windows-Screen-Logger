@@ -1,10 +1,11 @@
 using System.Diagnostics;
+using WindowsScreenLogger.Installation;
 
 namespace WindowsScreenLogger
 {
 	internal static class Program
 	{
-		private static Mutex mutex = null;
+		private static Mutex? mutex = null;
 
 		/// <summary>
 		///  The main entry point for the application.

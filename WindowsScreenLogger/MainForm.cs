@@ -2,6 +2,7 @@ using System.Diagnostics;
 using SkiaSharp;
 using System.Drawing.Imaging;
 using Microsoft.Win32;
+using WindowsScreenLogger.Installation;
 using Timer = System.Windows.Forms.Timer;
 
 namespace WindowsScreenLogger;

@@ -50,6 +50,12 @@
 	  <PackageReference Include="SkiaSharp" Version="3.119.0" />
 	</ItemGroup>
 
+	<!-- Installation Scripts as Embedded Resources -->
+	<ItemGroup>
+		<EmbeddedResource Include="Installation\UninstallScript.bat" />
+		<EmbeddedResource Include="Installation\UninstallScript.ps1" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<Compile Update="Settings.Designer.cs">
 			<DesignTimeSharedInput>True</DesignTimeSharedInput>
