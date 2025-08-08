@@ -10,8 +10,15 @@ namespace WindowsScreenLogger
 		///  The main entry point for the application.
 		/// </summary>
 		[STAThread]
-		static void Main()
+		static void Main(string[] args)
 		{
+			// Handle command line arguments
+			if (args.Length > 0)
+			{
+				HandleCommandLineArguments(args);
+				return;
+			}
+
 			const string mutexName = "WindowsScreenLoggerMutex";
 
 			// Ensure only one instance is running
@@ -25,6 +32,13 @@ namespace WindowsScreenLogger
 				return;
 			}
 
+			// Check if running from install location and prompt for installation if needed
+			if (!SelfInstaller.IsRunningFromInstallLocation() && !SelfInstaller.IsInstalled())
+			{
+				SelfInstaller.PromptForInstallation();
+				// If user declined installation, continue running from current location
+			}
+
 			// Set the process priority to BelowNormal
 			Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
 
@@ -35,6 +49,40 @@ namespace WindowsScreenLogger
 
 			// Release the mutex when the application exits
 			GC.KeepAlive(mutex);
+		}
+
+		private static void HandleCommandLineArguments(string[] args)
+		{
+			for (int i = 0; i < args.Length; i++)
+			{
+				switch (args[i].ToLower())
+				{
+					case "/install":
+						// Initialize application for dialogs
+						ApplicationConfiguration.Initialize();
+						SelfInstaller.PerformInstallation();
+						break;
+
+					case "/uninstall":
+						// Check for quiet flag
+						bool quiet = i + 1 < args.Length && args[i + 1].ToLower() == "/quiet";
+						if (!quiet)
+						{
+							ApplicationConfiguration.Initialize();
+						}
+						SelfInstaller.PerformUninstallation(quiet);
+						break;
+
+					case "/quiet":
+						// Handled in uninstall case
+						break;
+
+					default:
+						MessageBox.Show($"Unknown command line argument: {args[i]}", 
+							"Invalid Argument", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						break;
+				}
+			}
 		}
 	}
 }

@@ -222,22 +222,15 @@ public partial class SettingsForm : Form
 
 	private void SetStartup(bool enable)
 	{
-		const string runKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
-		using RegistryKey key = Registry.CurrentUser.OpenSubKey(runKey, true);
-		if (enable)
-		{
-			key.SetValue(Application.ProductName, Application.ExecutablePath);
-		}
-		else
-		{
-			key.DeleteValue(Application.ProductName, false);
-		}
+		// Use the self-installer for proper startup registration
+		SelfInstaller.SetStartupRegistration(enable);
 	}
 
 	private bool GetStartup()
 	{
 		const string runKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
-		using RegistryKey key = Registry.CurrentUser.OpenSubKey(runKey, true);
-		return key.GetValue(Application.ProductName) != null;
+		using RegistryKey? key = Registry.CurrentUser.OpenSubKey(runKey, false);
+		var value = key?.GetValue(SelfInstaller.IsInstalled() ? "Windows Screen Logger" : Application.ProductName);
+		return value != null;
 	}
 }

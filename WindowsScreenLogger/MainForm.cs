@@ -72,6 +72,15 @@ public partial class MainForm : Form
 		notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
 		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
 		notifyIcon.ContextMenuStrip.Items.Add("Clean Old Screenshots", null, OnCleanClick);
+		
+		// Add uninstall option if application is installed
+		if (SelfInstaller.IsInstalled() && SelfInstaller.IsRunningFromInstallLocation())
+		{
+			notifyIcon.ContextMenuStrip.Items.Add("-"); // Separator
+			notifyIcon.ContextMenuStrip.Items.Add("Uninstall", null, OnUninstallClick);
+		}
+		
+		notifyIcon.ContextMenuStrip.Items.Add("-"); // Separator
 		notifyIcon.ContextMenuStrip.Items.Add("Exit", null, Exit);
 
 		// 
@@ -308,5 +317,42 @@ public partial class MainForm : Form
 	{
 		// Update status in UI or log
 		Debug.WriteLine(message);
+	}
+
+	private void OnUninstallClick(object? sender, EventArgs e)
+	{
+		// Safety check
+		if (!SelfInstaller.IsInstalled() || !SelfInstaller.IsRunningFromInstallLocation())
+		{
+			MessageBox.Show("Uninstall is only available when running from the installed location.", 
+				"Uninstall Not Available", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			return;
+		}
+
+		var result = MessageBox.Show(
+			"Are you sure you want to uninstall Windows Screen Logger?\n\n" +
+			"This will:\n" +
+			"• Remove the application from your system\n" +
+			"• Remove it from Windows Apps & Features\n" +
+			"• Disable startup with Windows\n" +
+			"• Keep your screenshot files\n\n" +
+			"Continue with uninstallation?",
+			"Confirm Uninstall",
+			MessageBoxButtons.YesNo,
+			MessageBoxIcon.Question,
+			MessageBoxDefaultButton.Button2);
+
+		if (result == DialogResult.Yes)
+		{
+			try
+			{
+				SelfInstaller.PerformUninstallation();
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show($"Failed to start uninstallation: {ex.Message}", 
+					"Uninstall Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
 	}
 }

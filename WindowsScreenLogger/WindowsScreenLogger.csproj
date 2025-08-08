@@ -29,6 +29,16 @@
 		<EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
 		<HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
 		<MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+
+		<!-- Assembly Information for Windows Apps -->
+		<AssemblyTitle>Windows Screen Logger</AssemblyTitle>
+		<AssemblyDescription>Automated screen capture utility for Windows</AssemblyDescription>
+		<AssemblyCompany>WindowsScreenLogger</AssemblyCompany>
+		<AssemblyProduct>Windows Screen Logger</AssemblyProduct>
+		<AssemblyCopyright>Copyright © 2024</AssemblyCopyright>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<FileVersion>1.0.0.0</FileVersion>
+		<ProductVersion>1.0.0</ProductVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
