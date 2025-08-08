@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net9.0-windows10.0.22621.0</TargetFramework>
+		<TargetFramework>net9.0-windows10.0.17763.0</TargetFramework>
 		<TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
 		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
@@ -20,7 +20,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Microsoft.Windows.ImplementationLibrary"/>
+	  <PackageReference Include="Microsoft.Windows.ImplementationLibrary" />
 	  <PackageReference Include="SkiaSharp" Version="3.119.0" />
 	</ItemGroup>
 
