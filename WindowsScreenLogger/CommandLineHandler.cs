@@ -43,6 +43,10 @@ namespace WindowsScreenLogger
             var debugCommand = new Command("debug", "Show detailed debug information");
             debugCommand.SetHandler(HandleDebugCommand);
 
+            // Test command for uninstall functionality
+            var testUninstallCommand = new Command("test-uninstall", "Test the uninstall process (dry run)");
+            testUninstallCommand.SetHandler(HandleTestUninstallCommand);
+
             // Version command (alternative to --version)
             var versionCommand = new Command("version", "Show version information");
             versionCommand.SetHandler(HandleVersionCommand);
@@ -65,6 +69,7 @@ namespace WindowsScreenLogger
             rootCommand.AddCommand(uninstallCommand);
             rootCommand.AddCommand(statusCommand);
             rootCommand.AddCommand(debugCommand);
+            rootCommand.AddCommand(testUninstallCommand);
             rootCommand.AddCommand(versionCommand);
             rootCommand.AddCommand(runCommand);
 
@@ -204,6 +209,28 @@ namespace WindowsScreenLogger
                         MessageBox.Show(message, "Not Installed", 
                             MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
+                    return;
+                }
+
+                // Check for and shut down any running instances before uninstalling
+                AppLogger.LogInformation("Checking for running instances of the application");
+                bool instancesShutDown = SelfInstaller.ShutdownRunningInstances(quiet);
+                
+                if (!instancesShutDown && !force)
+                {
+                    string message = "Cannot uninstall: Unable to shut down running instances of the application.";
+                    AppLogger.LogUninstallOperation("Instance Shutdown", false, message);
+                    
+                    if (quiet)
+                    {
+                        Console.WriteLine(message);
+                    }
+                    else
+                    {
+                        MessageBox.Show(message + "\n\nPlease close the application manually and try again.", 
+                            "Uninstall Blocked", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    Environment.Exit(1);
                     return;
                 }
 
@@ -387,6 +414,79 @@ namespace WindowsScreenLogger
             catch (Exception ex)
             {
                 Console.WriteLine($"Error generating debug information: {ex.Message}");
+                Environment.Exit(1);
+            }
+        }
+
+        private static void HandleTestUninstallCommand()
+        {
+            try
+            {
+                Console.WriteLine("Windows Screen Logger - Uninstall Test");
+                Console.WriteLine("=====================================");
+                
+                // Test installation detection
+                bool isInstalled = SelfInstaller.IsInstalled();
+                Console.WriteLine($"Is Installed: {isInstalled}");
+                Console.WriteLine($"Installation Path: {SelfInstaller.InstallPath}");
+                Console.WriteLine($"Executable Path: {SelfInstaller.InstalledExecutablePath}");
+                Console.WriteLine($"Running from Install Location: {SelfInstaller.IsRunningFromInstallLocation()}");
+                
+                Console.WriteLine();
+                Console.WriteLine("Running Process Check:");
+                Console.WriteLine("=====================");
+                
+                // Test process detection
+                var currentProcess = Process.GetCurrentProcess();
+                var processes = Process.GetProcessesByName("WindowsScreenLogger")
+                    .Where(p => p.Id != currentProcess.Id)
+                    .ToArray();
+                
+                Console.WriteLine($"Current Process ID: {currentProcess.Id}");
+                Console.WriteLine($"Other WindowsScreenLogger processes found: {processes.Length}");
+                
+                foreach (var process in processes)
+                {
+                    try
+                    {
+                        Console.WriteLine($"  - Process ID: {process.Id}, Started: {process.StartTime}");
+                        Console.WriteLine($"    Main Window Title: '{process.MainWindowTitle}'");
+                        Console.WriteLine($"    Has Main Window: {!string.IsNullOrEmpty(process.MainWindowTitle)}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"  - Process ID: {process.Id}, Error getting details: {ex.Message}");
+                    }
+                    finally
+                    {
+                        process.Dispose();
+                    }
+                }
+                
+                Console.WriteLine();
+                Console.WriteLine("Registry Check:");
+                Console.WriteLine("==============");
+                
+                // Test registry entries
+                var (uninstallString, quietUninstallString) = WindowsAppsRegistry.GetRegisteredUninstallStrings();
+                Console.WriteLine($"UninstallString: {uninstallString ?? "NOT SET"}");
+                Console.WriteLine($"QuietUninstallString: {quietUninstallString ?? "NOT SET"}");
+                
+                Console.WriteLine();
+                Console.WriteLine("Command Line Simulation:");
+                Console.WriteLine("=======================");
+                
+                // Show what would happen with different command lines
+                Console.WriteLine("If Windows calls these commands:");
+                Console.WriteLine($"  {uninstallString ?? "NOT SET"}");
+                Console.WriteLine($"  {quietUninstallString ?? "NOT SET"}");
+                
+                Console.WriteLine();
+                Console.WriteLine("Test completed. No actual uninstall was performed.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during uninstall test: {ex.Message}");
                 Environment.Exit(1);
             }
         }
