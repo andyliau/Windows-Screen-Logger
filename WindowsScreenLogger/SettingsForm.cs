@@ -1,4 +1,5 @@
 ﻿using Microsoft.Win32;
+using WindowsScreenLogger.Installation;
 
 namespace WindowsScreenLogger;
 
@@ -222,22 +223,12 @@ public partial class SettingsForm : Form
 
 	private void SetStartup(bool enable)
 	{
-		const string runKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
-		using RegistryKey key = Registry.CurrentUser.OpenSubKey(runKey, true);
-		if (enable)
-		{
-			key.SetValue(Application.ProductName, Application.ExecutablePath);
-		}
-		else
-		{
-			key.DeleteValue(Application.ProductName, false);
-		}
+		// Use the StartupRegistry for proper startup registration
+		StartupRegistry.SetStartupRegistration(enable, SelfInstaller.IsInstalled() ? SelfInstaller.InstalledExecutablePath : Application.ExecutablePath);
 	}
 
 	private bool GetStartup()
 	{
-		const string runKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
-		using RegistryKey key = Registry.CurrentUser.OpenSubKey(runKey, true);
-		return key.GetValue(Application.ProductName) != null;
+		return StartupRegistry.IsStartupEnabled();
 	}
 }

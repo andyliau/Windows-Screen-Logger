@@ -7,6 +7,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageReference Include="Microsoft.Windows.ImplementationLibrary" Version="1.0.250325.1" />
+    <PackageReference Include="System.Text.Json" Version="9.0.8" />
     <PackageReference Include="xunit" Version="2.5.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.0" />

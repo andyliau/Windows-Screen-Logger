@@ -2,6 +2,7 @@ using System.Diagnostics;
 using SkiaSharp;
 using System.Drawing.Imaging;
 using Microsoft.Win32;
+using WindowsScreenLogger.Installation;
 using Timer = System.Windows.Forms.Timer;
 
 namespace WindowsScreenLogger;
@@ -16,9 +17,12 @@ public partial class MainForm : Form
 
 	private NotifyIcon notifyIcon;
 	private bool isRecording = false;
+	private readonly AppConfiguration config;
 
-	public MainForm()
+	public MainForm(AppConfiguration? configuration = null)
 	{
+		config = configuration ?? AppConfiguration.Load();
+		
 		InitializeComponent();
 		Configure();
 
@@ -30,9 +34,11 @@ public partial class MainForm : Form
 
 		 // Initialize and start the clear timer
 		clearTimer = new Timer();
-		clearTimer.Interval = 60 * 60 * 1000; // 1 hour in milliseconds
+		clearTimer.Interval = config.CleanupIntervalHours * 60 * 60 * 1000; // Convert hours to milliseconds
 		clearTimer.Tick += (sender, e) => CleanOldScreenshots();
 		clearTimer.Start();
+
+		AppLogger.LogInformation($"Clear timer set to {config.CleanupIntervalHours} hours");
 
 		// Hide form on startup
 		this.WindowState = FormWindowState.Minimized;
@@ -72,6 +78,15 @@ public partial class MainForm : Form
 		notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
 		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
 		notifyIcon.ContextMenuStrip.Items.Add("Clean Old Screenshots", null, OnCleanClick);
+		
+		// Add uninstall option if application is installed
+		if (SelfInstaller.IsInstalled() && SelfInstaller.IsRunningFromInstallLocation())
+		{
+			notifyIcon.ContextMenuStrip.Items.Add("-"); // Separator
+			notifyIcon.ContextMenuStrip.Items.Add("Uninstall", null, OnUninstallClick);
+		}
+		
+		notifyIcon.ContextMenuStrip.Items.Add("-"); // Separator
 		notifyIcon.ContextMenuStrip.Items.Add("Exit", null, Exit);
 
 		// 
@@ -92,23 +107,29 @@ public partial class MainForm : Form
 
 	private void Configure()
 	{
-		captureInterval = Settings.Default.CaptureInterval;
+		// Use configuration from AppConfiguration instead of Settings.Default
+		captureInterval = config.CaptureInterval;
 		if (captureInterval <= 0)
 		{
+			AppLogger.LogError($"Invalid capture interval: {captureInterval}");
 			MessageBox.Show("Invalid capture interval. Please check your settings.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			return;
 		}
+		
 		if (captureTimer != null)
 		{
 			captureTimer.Stop();
 			captureTimer.Tick -= CaptureTimer_Tick;
 		}
+		
 		captureTimer = new Timer
 		{
 			Interval = captureInterval * 1000
 		};
 		captureTimer.Tick += CaptureTimer_Tick;
 		captureTimer.Start();
+		
+		AppLogger.LogInformation($"Capture timer configured with {captureInterval} second interval");
 	}
 
 
@@ -137,7 +158,7 @@ public partial class MainForm : Form
 			screenGraphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
 
 			// Resize the image based on settings
-			int percentage = Settings.Default.ImageSizePercentage;
+			int percentage = config.ImageSizePercentage;
 			bool resizeNeeded = percentage != 100;
 			int newWidth = bounds.Width * percentage / 100;
 			int newHeight = bounds.Height * percentage / 100;
@@ -163,13 +184,24 @@ public partial class MainForm : Form
 					image = SKImage.FromBitmap(skBitmap);
 				}
 
-				// Save as JPEG with quality parameter
-				var quality = Settings.Default.ImageQuality;
-				var data = image.Encode(SKEncodedImageFormat.Jpeg, quality);
+				// Save based on configured format and quality
+				var quality = config.ImageQuality;
+				var format = config.ScreenshotFormat.ToLowerInvariant() switch
+				{
+					"png" => SKEncodedImageFormat.Png,
+					"bmp" => SKEncodedImageFormat.Bmp,
+					"webp" => SKEncodedImageFormat.Webp,
+					_ => SKEncodedImageFormat.Jpeg
+				};
 
-				string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.jpg");
+				var data = image.Encode(format, quality);
+				var extension = config.ScreenshotFormat.ToLowerInvariant() == "jpeg" ? "jpg" : config.ScreenshotFormat.ToLowerInvariant();
+				string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.{extension}");
+				
 				using var fileStream = File.OpenWrite(filePath);
 				data.SaveTo(fileStream);
+
+				AppLogger.LogTrace($"Screenshot saved: {filePath}");
 			}
 			finally
 			{
@@ -178,6 +210,7 @@ public partial class MainForm : Form
 		}
 		catch (Exception ex)
 		{
+			AppLogger.LogException(ex, "Screen capture");
 			// MessageBox.Show($"An error occurred while capturing the screen: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 		finally
@@ -189,12 +222,10 @@ public partial class MainForm : Form
 		Application.DoEvents();
 	}
 
-	static string RootPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "WindowsScreenLogger");
-	static string GetSavePath()
+	private string GetSavePath()
 	{
-		var path = Path.Combine(
-			RootPath,
-			DateTime.Now.ToString("yyyy-MM-dd"));
+		var rootPath = config.GetEffectiveSavePath();
+		var path = Path.Combine(rootPath, DateTime.Now.ToString("yyyy-MM-dd"));
 		Directory.CreateDirectory(path);
 		return path;
 	}
@@ -269,44 +300,86 @@ public partial class MainForm : Form
 	private void OnCleanClick(object? sender, EventArgs e)
 	{
 		CleanOldScreenshots();
-		MessageBox.Show($"Old screenshots (older than {Settings.Default.ClearDays} days) have been removed.", 
+		MessageBox.Show($"Old screenshots (older than {config.ClearDays} days) have been removed.", 
 			"Cleanup Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
 	}
 
 	private void CleanOldScreenshots()
 	{
-		if (!Directory.Exists(RootPath))
+		var rootPath = config.GetEffectiveSavePath();
+		if (!Directory.Exists(rootPath))
 		{
 			return;
 		}
 
-		var subDirectories = Directory.GetDirectories(RootPath);
+		var subDirectories = Directory.GetDirectories(rootPath);
 		int dirDeleted = 0;
 
 		foreach (var directory in subDirectories)
 		{
 			var creationTime = Directory.GetCreationTime(directory);
-			if ((DateTime.Now - creationTime).TotalDays > Settings.Default.ClearDays)
+			if ((DateTime.Now - creationTime).TotalDays > config.ClearDays)
 			{
 				try
 				{
 					Directory.Delete(directory, true); // Use true to delete directories and their contents
 					dirDeleted++;
+					AppLogger.LogDebug($"Deleted old screenshot directory: {directory}");
 				}
 				catch (Exception ex)
 				{
 					// Log error or silently continue
+					AppLogger.LogWarning($"Error deleting directory {directory}: {ex.Message}");
 					UpdateStatus($"Error deleting file {directory}: {ex.Message}");
 				}
 			}
 		}
 
-		UpdateStatus($"Cleaned up {dirDeleted} screenshots folders older than {Settings.Default.ClearDays} days");
+		var message = $"Cleaned up {dirDeleted} screenshots folders older than {config.ClearDays} days";
+		AppLogger.LogInformation(message);
+		UpdateStatus(message);
 	}
 
 	private void UpdateStatus(string message)
 	{
 		// Update status in UI or log
 		Debug.WriteLine(message);
+	}
+
+	private void OnUninstallClick(object? sender, EventArgs e)
+	{
+		// Safety check
+		if (!SelfInstaller.IsInstalled() || !SelfInstaller.IsRunningFromInstallLocation())
+		{
+			MessageBox.Show("Uninstall is only available when running from the installed location.", 
+				"Uninstall Not Available", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			return;
+		}
+
+		var result = MessageBox.Show(
+			"Are you sure you want to uninstall Windows Screen Logger?\n\n" +
+			"This will:\n" +
+			"• Remove the application from your system\n" +
+			"• Remove it from Windows Apps & Features\n" +
+			"• Disable startup with Windows\n" +
+			"• Keep your screenshot files\n\n" +
+			"Continue with uninstallation?",
+			"Confirm Uninstall",
+			MessageBoxButtons.YesNo,
+			MessageBoxIcon.Question,
+			MessageBoxDefaultButton.Button2);
+
+		if (result == DialogResult.Yes)
+		{
+			try
+			{
+				SelfInstaller.PerformUninstallation();
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show($"Failed to start uninstallation: {ex.Message}", 
+					"Uninstall Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
 	}
 }

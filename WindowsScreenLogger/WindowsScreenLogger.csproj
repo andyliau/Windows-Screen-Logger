@@ -29,6 +29,16 @@
 		<EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
 		<HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
 		<MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+
+		<!-- Assembly Information for Windows Apps -->
+		<AssemblyTitle>Windows Screen Logger</AssemblyTitle>
+		<AssemblyDescription>Automated screen capture utility for Windows</AssemblyDescription>
+		<AssemblyCompany>WindowsScreenLogger</AssemblyCompany>
+		<AssemblyProduct>Windows Screen Logger</AssemblyProduct>
+		<AssemblyCopyright>Copyright © 2024</AssemblyCopyright>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<FileVersion>1.0.0.0</FileVersion>
+		<ProductVersion>1.0.0</ProductVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -36,8 +46,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Microsoft.Windows.ImplementationLibrary" />
+	  <PackageReference Include="Microsoft.Windows.ImplementationLibrary" Version="1.0.250325.1" />
 	  <PackageReference Include="SkiaSharp" Version="3.119.0" />
+	  <!-- Enhanced command line handling -->
+	  <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+	  <!-- Better JSON handling for configuration -->
+	  <PackageReference Include="System.Text.Json" Version="9.0.8" />
+	</ItemGroup>
+
+	<!-- Installation Scripts as Embedded Resources -->
+	<ItemGroup>
+		<EmbeddedResource Include="Installation\UninstallScript.bat" />
+		<EmbeddedResource Include="Installation\UninstallScript.ps1" />
 	</ItemGroup>
 
 	<ItemGroup>
