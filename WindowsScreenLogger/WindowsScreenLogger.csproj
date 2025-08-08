@@ -2,17 +2,29 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net9.0-windows10.0.17763.0</TargetFramework>
-		<TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
-		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<TargetFramework>net9.0-windows10.0.22000.0</TargetFramework>
+		<TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
+		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
 		<UseWindowsForms>true</UseWindowsForms>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<PublishSingleFile>true</PublishSingleFile>
-		<SelfContained>false</SelfContained>
-		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 		<ApplicationIcon>C06SYqz8FU.ico</ApplicationIcon>
+
+		<!-- Self-contained deployment targeting Windows 11 (22000) -->
+		<PublishSingleFile>true</PublishSingleFile>
+		<SelfContained>true</SelfContained>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+		
+		<!-- Optimize for Windows 11 -->
+		<PublishReadyToRun>true</PublishReadyToRun>
+		<PublishReadyToRunShowWarnings>true</PublishReadyToRunShowWarnings>
+		
+		<!-- Size optimizations without trimming -->
+		<DebuggerSupport>false</DebuggerSupport>
+		<EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
+		<HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+		<MetadataUpdaterSupport>false</MetadataUpdaterSupport>
 	</PropertyGroup>
 
 	<ItemGroup>
