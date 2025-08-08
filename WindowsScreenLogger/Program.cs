@@ -30,7 +30,7 @@ namespace WindowsScreenLogger
 		/// <summary>
 		/// Starts the normal application flow
 		/// </summary>
-		public static void StartNormalApplication(bool noInstallPrompt = false, string? configPath = null)
+		public static void StartNormalApplication(bool noInstallPrompt = false, string? configPath = null, bool isPostInstall = false)
 		{
 			try
 			{
@@ -55,10 +55,54 @@ namespace WindowsScreenLogger
 
 				if (!createdNew)
 				{
-					AppLogger.LogWarning("Another instance is already running");
-					MessageBox.Show("Another instance of the application is already running.", 
-						"Instance Already Running", MessageBoxButtons.OK, MessageBoxIcon.Information);
-					return;
+					// Handle post-installation startup with enhanced retry logic
+					if (isPostInstall || (SelfInstaller.IsRunningFromInstallLocation() && SelfInstaller.IsInstalled()))
+					{
+						AppLogger.LogInformation("Post-installation startup detected, waiting for previous instance to exit...");
+						
+						// Multiple retry attempts with increasing delays
+						int maxRetries = 5;
+						for (int i = 0; i < maxRetries; i++)
+						{
+							Thread.Sleep(1000 * (i + 1)); // 1s, 2s, 3s, 4s, 5s
+							mutex?.Dispose();
+							mutex = new Mutex(true, mutexName, out createdNew);
+							
+							if (createdNew)
+							{
+								AppLogger.LogInformation($"Successfully acquired mutex after {i + 1} retries");
+								break;
+							}
+							
+							AppLogger.LogDebug($"Retry {i + 1}/{maxRetries} failed, previous instance still running");
+						}
+						
+						if (!createdNew)
+						{
+							AppLogger.LogWarning("Another instance is still running after all retries");
+							if (isPostInstall)
+							{
+								// For post-install, show a more helpful message
+								MessageBox.Show("Installation completed successfully!\n\n" +
+									"Another instance of the application is currently running.\n" +
+									"Please close the existing instance and restart the application manually.", 
+									"Installation Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+							}
+							else
+							{
+								MessageBox.Show("Another instance of the application is already running.", 
+									"Instance Already Running", MessageBoxButtons.OK, MessageBoxIcon.Information);
+							}
+							return;
+						}
+					}
+					else
+					{
+						AppLogger.LogWarning("Another instance is already running");
+						MessageBox.Show("Another instance of the application is already running.", 
+							"Instance Already Running", MessageBoxButtons.OK, MessageBoxIcon.Information);
+						return;
+					}
 				}
 
 				AppLogger.LogInformation("Application instance created successfully");

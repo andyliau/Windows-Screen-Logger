@@ -54,6 +54,7 @@ namespace WindowsScreenLogger
             // Add global options
             rootCommand.AddGlobalOption(new Option<bool>("--verbose", "Enable verbose logging"));
             rootCommand.AddGlobalOption(new Option<bool>("--debug", "Enable debug mode"));
+            rootCommand.AddGlobalOption(new Option<bool>("--post-install", "Internal flag for post-installation startup"));
 
             // Add commands
             rootCommand.AddCommand(installCommand);
@@ -63,7 +64,8 @@ namespace WindowsScreenLogger
             rootCommand.AddCommand(runCommand);
 
             // Set default handler for when no command is specified
-            rootCommand.SetHandler(HandleDefaultCommand);
+            rootCommand.SetHandler((bool postInstall) => HandleDefaultCommand(postInstall),
+                rootCommand.Options.OfType<Option<bool>>().First(o => o.Name == "post-install"));
 
             return rootCommand;
         }
@@ -213,10 +215,11 @@ namespace WindowsScreenLogger
             Program.StartNormalApplication(noInstallPrompt, configPath);
         }
 
-        private static void HandleDefaultCommand()
+        private static void HandleDefaultCommand(bool postInstall = false)
         {
             // Default behavior - run the application normally
-            Program.StartNormalApplication();
+            // If this is a post-install start, pass a flag to handle mutex more gracefully
+            Program.StartNormalApplication(postInstall, null, postInstall);
         }
 
         private static void PerformSilentInstallation()

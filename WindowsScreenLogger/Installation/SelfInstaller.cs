@@ -41,6 +41,7 @@ namespace WindowsScreenLogger.Installation
                 "• Enable proper startup with Windows\n" +
                 "• Allow easy uninstallation\n" +
                 "• No administrator privileges required\n\n" +
+                "The application will automatically restart from the installed location.\n\n" +
                 "Install now?",
                 "Install Application",
                 MessageBoxButtons.YesNo,
@@ -69,21 +70,92 @@ namespace WindowsScreenLogger.Installation
                 // Set startup registry entry to installed location
                 StartupRegistry.SetStartupRegistration(true, InstalledExecutablePath);
 
-                MessageBox.Show($"{AppName} has been successfully installed!\n\n" +
-                    $"Installation location: {InstallPath}\n\n" +
-                    "The application will now restart from the installed location.",
-                    "Installation Complete",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-
-                // Start the installed version
-                Process.Start(InstalledExecutablePath);
+                // Use delayed start to avoid mutex conflict - no blocking dialogs
+                StartInstalledVersionWithDelay();
+                
+                // Simple, direct exit approach
                 Application.Exit();
+                
+                // Give a brief moment for graceful exit, then force if needed
+                Thread.Sleep(300);
+                Environment.Exit(0);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Installation failed: {ex.Message}", 
                     "Installation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Starts the installed version with a delay to ensure the current process has time to exit
+        /// </summary>
+        private static void StartInstalledVersionWithDelay()
+        {
+            try
+            {
+                // Create a batch script that waits and then starts the installed version
+                string tempBatchFile = Path.Combine(Path.GetTempPath(), "start_installed_screenlogger.bat");
+                
+                string batchContent = $@"@echo off
+rem Wait for the current process to fully exit
+timeout /t 2 /nobreak >nul
+
+rem Verify the installed executable exists
+if not exist ""{InstalledExecutablePath}"" (
+    exit /b 1
+)
+
+rem Start the installed version with a special flag
+start """" ""{InstalledExecutablePath}"" --post-install
+
+rem Wait a moment to ensure the process starts
+timeout /t 1 /nobreak >nul
+
+rem Delete this batch file
+del ""%~f0"" >nul 2>&1
+";
+
+                File.WriteAllText(tempBatchFile, batchContent);
+                
+                // Start the batch file and let it handle the delayed execution
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = tempBatchFile,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                
+                Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                // Fallback: try direct start with special flag after a shorter delay
+                Debug.WriteLine($"Failed to create delayed start script: {ex.Message}");
+                try
+                {
+                    // Use a background task for the fallback to avoid blocking
+                    Task.Run(async () =>
+                    {
+                        await Task.Delay(1500); // Shorter delay for fallback
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo(InstalledExecutablePath, "--post-install")
+                            {
+                                UseShellExecute = true
+                            });
+                        }
+                        catch (Exception fallbackEx)
+                        {
+                            Debug.WriteLine($"Fallback start also failed: {fallbackEx.Message}");
+                        }
+                    });
+                }
+                catch (Exception taskEx)
+                {
+                    Debug.WriteLine($"Failed to create fallback task: {taskEx.Message}");
+                }
             }
         }
 
