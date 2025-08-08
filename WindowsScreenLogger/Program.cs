@@ -15,15 +15,40 @@ namespace WindowsScreenLogger
 		[STAThread]
 		static void Main(string[] args)
 		{
+			// Initialize basic logging for debugging command line issues
+			AppLogger.Initialize(true, AppLogger.LogLevel.Debug);
+			AppLogger.LogCommandLineArgs(args);
+
 			// If we have command line arguments, use the enhanced command line parser
 			if (args.Length > 0)
 			{
-				var rootCommand = CommandLineHandler.CreateRootCommand();
-				rootCommand.Invoke(args);
-				return;
+				AppLogger.LogInformation("Processing command line arguments");
+				
+				try
+				{
+					// First try to handle legacy command formats (e.g., /uninstall, /install)
+					if (CommandLineHandler.TryHandleLegacyCommand(args))
+					{
+						AppLogger.LogInformation("Legacy command format processed successfully");
+						return;
+					}
+
+					// Use modern System.CommandLine parser
+					AppLogger.LogInformation("Processing with System.CommandLine parser");
+					var rootCommand = CommandLineHandler.CreateRootCommand();
+					var result = rootCommand.Invoke(args);
+					AppLogger.LogInformation($"Command line processing completed with exit code: {result}");
+					return;
+				}
+				catch (Exception ex)
+				{
+					AppLogger.LogException(ex, "Command line processing");
+					Environment.Exit(1);
+				}
 			}
 
 			// No arguments - start normally
+			AppLogger.LogInformation("No command line arguments, starting normal application flow");
 			StartNormalApplication();
 		}
 
@@ -38,7 +63,7 @@ namespace WindowsScreenLogger
 				appConfig = AppConfiguration.Load(configPath);
 				appConfig.Validate();
 
-				// Initialize logging
+				// Re-initialize logging with proper configuration
 				var logLevel = Enum.TryParse<AppLogger.LogLevel>(appConfig.LogLevel, out var level) 
 					? level : AppLogger.LogLevel.Information;
 				AppLogger.Initialize(appConfig.EnableLogging, logLevel);

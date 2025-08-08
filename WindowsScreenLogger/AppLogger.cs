@@ -62,6 +62,52 @@ namespace WindowsScreenLogger
             LogError(message);
         }
 
+        /// <summary>
+        /// Logs command line arguments being processed
+        /// </summary>
+        public static void LogCommandLineArgs(string[] args)
+        {
+            if (args.Length == 0)
+            {
+                LogDebug("No command line arguments provided");
+                return;
+            }
+
+            LogInformation($"Processing {args.Length} command line arguments:");
+            for (int i = 0; i < args.Length; i++)
+            {
+                LogInformation($"  Arg[{i}]: '{args[i]}'");
+            }
+        }
+
+        /// <summary>
+        /// Logs uninstall operation details
+        /// </summary>
+        public static void LogUninstallOperation(string operation, bool success, string? details = null)
+        {
+            var level = success ? LogLevel.Information : LogLevel.Error;
+            var message = $"Uninstall {operation}: {(success ? "SUCCESS" : "FAILED")}";
+            if (!string.IsNullOrEmpty(details))
+            {
+                message += $" - {details}";
+            }
+            Log(level, message);
+        }
+
+        /// <summary>
+        /// Logs registry operation details
+        /// </summary>
+        public static void LogRegistryOperation(string operation, string key, bool success, string? details = null)
+        {
+            var level = success ? LogLevel.Debug : LogLevel.Warning;
+            var message = $"Registry {operation} for '{key}': {(success ? "SUCCESS" : "FAILED")}";
+            if (!string.IsNullOrEmpty(details))
+            {
+                message += $" - {details}";
+            }
+            Log(level, message);
+        }
+
         private static void Log(LogLevel level, string message)
         {
             if (!_isInitialized || level < _currentLogLevel) return;

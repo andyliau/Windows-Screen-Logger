@@ -163,9 +163,12 @@ del ""%~f0"" >nul 2>&1
         {
             try
             {
+                AppLogger.LogInformation($"Starting PerformUninstallation - quiet: {quiet}");
+                
                 // Safety check - don't uninstall if not actually installed
                 if (!IsInstalled())
                 {
+                    AppLogger.LogUninstallOperation("Safety Check", false, "Application not installed");
                     if (!quiet)
                     {
                         MessageBox.Show("The application is not installed and cannot be uninstalled.", 
@@ -174,42 +177,79 @@ del ""%~f0"" >nul 2>&1
                     return;
                 }
 
+                AppLogger.LogInformation("Application installation verified, proceeding with uninstallation");
+
                 // Remove startup registration first
-                StartupRegistry.SetStartupRegistration(false, InstalledExecutablePath);
+                AppLogger.LogDebug("Removing startup registration");
+                try
+                {
+                    StartupRegistry.SetStartupRegistration(false, InstalledExecutablePath);
+                    AppLogger.LogUninstallOperation("Startup Registry Removal", true, "Startup registration removed successfully");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.LogUninstallOperation("Startup Registry Removal", false, ex.Message);
+                }
 
                 // Unregister from Windows Apps
-                WindowsAppsRegistry.UnregisterApplication();
+                AppLogger.LogDebug("Unregistering from Windows Apps & Features");
+                try
+                {
+                    WindowsAppsRegistry.UnregisterApplication();
+                    AppLogger.LogUninstallOperation("Windows Apps Registry Removal", true, "Successfully removed from Windows Apps & Features");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.LogUninstallOperation("Windows Apps Registry Removal", false, ex.Message);
+                }
 
                 // Check if we can delete the parent directory immediately
                 bool immediateDeleteSuccess = false;
-                if (!IsRunningFromInstallLocation() && Directory.Exists(InstallPath))
+                bool runningFromInstallLocation = IsRunningFromInstallLocation();
+                AppLogger.LogDebug($"Running from install location: {runningFromInstallLocation}");
+                
+                if (!runningFromInstallLocation && Directory.Exists(InstallPath))
                 {
                     try
                     {
+                        AppLogger.LogDebug($"Attempting immediate deletion of: {InstallPath}");
                         Directory.Delete(InstallPath, true);
                         immediateDeleteSuccess = true;
+                        AppLogger.LogUninstallOperation("Immediate Directory Deletion", true, $"Successfully removed: {InstallPath}");
                         Debug.WriteLine($"Successfully removed installation directory immediately: {InstallPath}");
                     }
                     catch (Exception ex)
                     {
+                        AppLogger.LogUninstallOperation("Immediate Directory Deletion", false, ex.Message);
                         Debug.WriteLine($"Immediate deletion failed (expected if running from install location): {ex.Message}");
                     }
                 }
 
                 if (!immediateDeleteSuccess && Directory.Exists(InstallPath))
                 {
+                    AppLogger.LogDebug($"Scheduling delayed deletion of installation directory: {InstallPath}");
                     Debug.WriteLine($"Scheduling delayed deletion of installation directory: {InstallPath}");
                     
                     // Use delayed deletion with both PowerShell and batch fallback
                     try
                     {
                         UninstallScriptManager.ExecutePowerShellUninstaller(InstallPath);
+                        AppLogger.LogUninstallOperation("Delayed Deletion (PowerShell)", true, "PowerShell uninstaller script created");
                     }
                     catch (Exception ex)
                     {
+                        AppLogger.LogUninstallOperation("Delayed Deletion (PowerShell)", false, ex.Message);
                         Debug.WriteLine($"PowerShell uninstaller creation failed, using batch fallback: {ex.Message}");
                         // Fallback to batch file if PowerShell fails
-                        UninstallScriptManager.ExecuteBatchUninstaller(InstallPath);
+                        try
+                        {
+                            UninstallScriptManager.ExecuteBatchUninstaller(InstallPath);
+                            AppLogger.LogUninstallOperation("Delayed Deletion (Batch)", true, "Batch uninstaller script created as fallback");
+                        }
+                        catch (Exception batchEx)
+                        {
+                            AppLogger.LogUninstallOperation("Delayed Deletion (Batch)", false, batchEx.Message);
+                        }
                     }
                 }
 
@@ -220,13 +260,18 @@ del ""%~f0"" >nul 2>&1
                         : $"{AppName} has been successfully uninstalled.\n\n" +
                           "The installation folder will be completely removed after this dialog is closed.";
                     
+                    AppLogger.LogInformation($"Showing completion message to user: {(immediateDeleteSuccess ? "immediate" : "delayed")} deletion");
                     MessageBox.Show(message, "Uninstall Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
 
+                AppLogger.LogInformation("Calling Application.Exit() to terminate application");
                 Application.Exit();
             }
             catch (Exception ex)
             {
+                AppLogger.LogUninstallOperation("Complete Process", false, ex.Message);
+                AppLogger.LogException(ex, "PerformUninstallation");
+                
                 if (!quiet)
                 {
                     MessageBox.Show($"Uninstallation failed: {ex.Message}", 
