@@ -16,6 +16,10 @@
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 		
+		<!-- Include native libraries in single file for self-extraction -->
+		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+		
 		<!-- Optimize for Windows 11 -->
 		<PublishReadyToRun>true</PublishReadyToRun>
 		<PublishReadyToRunShowWarnings>true</PublishReadyToRunShowWarnings>
