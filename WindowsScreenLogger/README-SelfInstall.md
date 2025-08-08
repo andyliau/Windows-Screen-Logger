@@ -26,7 +26,8 @@ The Windows Screen Logger now includes a comprehensive self-installation system 
 - **Context Menu Option**: Right-click system tray icon > Uninstall (when running from installed location)
 - **Windows Apps**: Standard uninstall through Windows Settings > Apps & features
 - **Command Line**: `WindowsScreenLogger.exe /uninstall` or `/uninstall /quiet`
-- **Complete Removal**: Removes files, registry entries, and startup configuration
+- **Complete Removal**: Removes the entire installation folder including all files and the parent directory
+- **Registry Cleanup**: Removes all registry entries and startup configuration
 - **Self-Deletion Handling**: Uses delayed deletion mechanisms to properly remove the executable while it's running
 
 ## Command Line Arguments
@@ -82,10 +83,12 @@ The Windows Screen Logger now includes a comprehensive self-installation system 
 
 ### Self-Deletion During Uninstall
 - **Problem**: Applications cannot delete themselves while running
-- **Solution**: Delayed deletion using external scripts
-- **Primary Method**: PowerShell script with execution policy bypass
-- **Fallback Method**: Batch file execution
+- **Solution**: Delayed deletion using external scripts that remove the entire parent folder
+- **Primary Method**: PowerShell script with multiple fallback strategies
+- **Fallback Methods**: Batch file execution and individual file deletion
+- **Complete Removal**: Ensures the entire `C:\Program Files\Windows Screen Logger\` folder is removed
 - **Safety Checks**: Prevents uninstallation when not actually installed
+- **Verification**: Includes methods to verify complete removal of installation directory
 
 ### Compatibility
 - Windows 11 optimized (minimum Windows 10 version 22000)
@@ -102,9 +105,11 @@ If you encounter "Access denied" errors during uninstallation:
 
 ### Manual Uninstall
 If automatic uninstall fails:
-1. Delete folder: `C:\Program Files\Windows Screen Logger\`
+1. Delete the entire folder: `C:\Program Files\Windows Screen Logger\` (including all contents)
 2. Remove registry key: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B3E7C6A8-9F2D-4E5A-B1C3-8D7F6E9A2B4C}`
 3. Remove startup entry: `HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\Windows Screen Logger`
+
+**Note**: The automatic uninstaller is designed to remove the complete parent folder `Windows Screen Logger` from Program Files, not just the executable file.
 
 ## Building and Deployment
 
