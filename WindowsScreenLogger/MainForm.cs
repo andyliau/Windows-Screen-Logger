@@ -63,6 +63,10 @@ public partial class MainForm : Form
 		{
 			SystemEvents.PowerModeChanged -= OnPowerModeChanged;
 			SystemEvents.SessionSwitch -= OnSessionSwitch;
+			captureTimer?.Stop();
+			captureTimer?.Dispose();
+			clearTimer?.Stop();
+			clearTimer?.Dispose();
 			activityTimer?.Stop();
 			activityTimer?.Dispose();
 			activityLoggingService.Flush(); // write any buffered lines before exit

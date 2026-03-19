@@ -9,7 +9,7 @@ namespace WindowsScreenLogger.Services
     /// in batches (one file append per minute, not per sample).
     ///
     /// Text format — one line per record, no schema:
-    ///   HH:mm:ss proc "title" [cat]      — window changed or first record
+    ///   HH:mm:ss proc "title"            — window changed or first record
     ///   .                                — same window heartbeat (no timestamp needed)
     ///
     /// Timing defaults:
@@ -43,7 +43,7 @@ namespace WindowsScreenLogger.Services
         private DateTime _lastChangeWrite = DateTime.MinValue;
         private DateTime _lastSameWrite   = DateTime.MinValue;
         private DateTime _lastFlush       = DateTime.Now;
-        private bool _overSizeLogged;
+        private string?  _overSizeDateKey; // date string of the day that hit the 5 MB cap
 
         public ActivityLoggingService(AppConfiguration config, ILogger logger)
         {
@@ -79,26 +79,22 @@ namespace WindowsScreenLogger.Services
 
                 if (windowChanged)
                 {
-                    if ((now - _lastChangeWrite).TotalSeconds < MinChangeWriteSeconds) goto checkFlush;
-                    Buffer($"{now:HH:mm:ss} {procName} \"{title}\"");
-                    _lastProc = procName;
-                    _lastTitle = title;
-                    _lastChangeWrite = now;
-                    _lastSameWrite = now;
+                    if ((now - _lastChangeWrite).TotalSeconds >= MinChangeWriteSeconds)
+                    {
+                        Buffer($"{now:HH:mm:ss} {procName} \"{title}\"");
+                        _lastProc = procName;
+                        _lastTitle = title;
+                        _lastChangeWrite = now;
+                        _lastSameWrite = now;
+                    }
                 }
-                else
+                else if ((now - _lastSameWrite).TotalSeconds >= SameHeartbeatSeconds)
                 {
-                    if ((now - _lastSameWrite).TotalSeconds < SameHeartbeatSeconds) goto checkFlush;
                     Buffer(".");
                     _lastSameWrite = now;
                 }
 
-                checkFlush:
-                if (_buffer.Count >= FlushLineCount ||
-                    (now - _lastFlush).TotalSeconds >= FlushIntervalSeconds)
-                {
-                    FlushBuffer();
-                }
+                MaybeFlush(now);
             }
             catch (Exception ex)
             {
@@ -116,6 +112,15 @@ namespace WindowsScreenLogger.Services
         {
             var root = _config.GetEffectiveSavePath();
             return Path.Combine(root, $"{DateTime.Now:yyyy-MM-dd}.log");
+        }
+
+        private void MaybeFlush(DateTime now)
+        {
+            if (_buffer.Count >= FlushLineCount ||
+                (now - _lastFlush).TotalSeconds >= FlushIntervalSeconds)
+            {
+                FlushBuffer();
+            }
         }
 
         private void Buffer(string line) => _buffer.Add(line);
@@ -152,10 +157,12 @@ namespace WindowsScreenLogger.Services
         {
             if (!File.Exists(path)) return false;
             if (new FileInfo(path).Length < MaxFileSizeBytes) return false;
-            if (!_overSizeLogged)
+
+            var today = DateTime.Now.ToString("yyyy-MM-dd");
+            if (_overSizeDateKey != today)
             {
+                _overSizeDateKey = today;
                 _logger.LogWarning("Activity log for today has reached the 5 MB limit. No further entries will be written today.");
-                _overSizeLogged = true;
             }
             return true;
         }

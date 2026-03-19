@@ -248,7 +248,7 @@ namespace WindowsScreenLogger.Tests
         private void InjectElevated()
         {
             var now  = DateTime.Now;
-            var line = $"{now:HH:mm:ss} unknown-elevated \"[elevated]\" [other]";
+            var line = $"{now:HH:mm:ss} unknown-elevated \"[elevated]\"";
             ((List<string>)BufferField.GetValue(_sut)!).Add(line);
             LastProcField.SetValue(_sut, "unknown-elevated");
             LastTitleField.SetValue(_sut, "[elevated]");
