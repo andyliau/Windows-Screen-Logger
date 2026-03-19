@@ -22,16 +22,14 @@ namespace WindowsScreenLogger.Services
     ///   • Runs on the WinForms UI thread — no locks needed
     ///   • P/Invoke calls: <0.1 ms each
     ///   • File I/O: at most once per minute (buffered)
-    ///   • Max daily file: 5 MB hard cap
     /// </summary>
     public class ActivityLoggingService : IDisposable
     {
-        private const long MaxFileSizeBytes    = 5 * 1024 * 1024;
-        private const int  MinChangeWriteSeconds = 5;
-        private const int  SameHeartbeatSeconds  = 60;
-        private const int  FlushIntervalSeconds  = 60;
-        private const int  FlushLineCount        = 12;
-        private const int  MaxTitleLength        = 80;
+        private const int MinChangeWriteSeconds = 5;
+        private const int SameHeartbeatSeconds  = 60;
+        private const int FlushIntervalSeconds  = 60;
+        private const int FlushLineCount        = 12;
+        private const int MaxTitleLength        = 80;
 
         private readonly AppConfiguration _config;
         private readonly ILogger _logger;
@@ -43,7 +41,6 @@ namespace WindowsScreenLogger.Services
         private DateTime _lastChangeWrite = DateTime.MinValue;
         private DateTime _lastSameWrite   = DateTime.MinValue;
         private DateTime _lastFlush       = DateTime.Now;
-        private string?  _overSizeDateKey; // date string of the day that hit the 5 MB cap
 
         public ActivityLoggingService(AppConfiguration config, ILogger logger)
         {
@@ -130,12 +127,6 @@ namespace WindowsScreenLogger.Services
             if (_buffer.Count == 0) return;
 
             var path = GetLogFilePath();
-            if (IsOverSizeLimit(path))
-            {
-                _buffer.Clear();
-                return;
-            }
-
             try
             {
                 Directory.CreateDirectory(_config.GetEffectiveSavePath());
@@ -151,20 +142,6 @@ namespace WindowsScreenLogger.Services
                 _buffer.Clear();
                 _lastFlush = DateTime.Now;
             }
-        }
-
-        private bool IsOverSizeLimit(string path)
-        {
-            if (!File.Exists(path)) return false;
-            if (new FileInfo(path).Length < MaxFileSizeBytes) return false;
-
-            var today = DateTime.Now.ToString("yyyy-MM-dd");
-            if (_overSizeDateKey != today)
-            {
-                _overSizeDateKey = today;
-                _logger.LogWarning("Activity log for today has reached the 5 MB limit. No further entries will be written today.");
-            }
-            return true;
         }
 
         private static (string name, bool elevated) ResolveProcessName(int pid)

@@ -137,23 +137,6 @@ namespace WindowsScreenLogger.Tests
             Assert.Empty((List<string>)BufferField.GetValue(_sut)!);
         }
 
-        // ── 5 MB cap ─────────────────────────────────────────────────────────
-
-        [Fact]
-        public void OverSizeLimit_BufferIsClearedWithoutWriting()
-        {
-            var path = _sut.GetLogFilePath();
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllBytes(path, new byte[5 * 1024 * 1024 + 1]);
-            var sizeBefore = new FileInfo(path).Length;
-
-            InjectActivity("code", "A");
-            InjectActivity("chrome", "B");
-            _sut.FlushBuffer();
-
-            Assert.Equal(sizeBefore, new FileInfo(path).Length);
-        }
-
         // ── Privacy filter ────────────────────────────────────────────────────
 
         [Fact]
