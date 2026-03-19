@@ -45,6 +45,13 @@ namespace WindowsScreenLogger
         public string? CustomSavePath { get; set; }
 
         /// <summary>
+        /// When true, activity records (active window, process, idle time) are appended
+        /// as JSONL alongside screenshots. Default is false (opt-in).
+        /// </summary>
+        [JsonPropertyName("enableActivityLogging")]
+        public bool EnableActivityLogging { get; set; } = false;
+
+        /// <summary>
         /// Default configuration file path
         /// </summary>
         public static string DefaultConfigPath => Path.Combine(

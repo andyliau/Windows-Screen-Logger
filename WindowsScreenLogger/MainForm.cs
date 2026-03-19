@@ -22,6 +22,7 @@ public partial class MainForm : Form
 	private readonly ILogger _logger;
 	private readonly ScreenshotService screenshotService;
 	private readonly CleanupService cleanupService;
+	private readonly ActivityLoggingService activityLoggingService;
 
 	public MainForm(AppConfiguration? configuration = null, ScreenshotService? screenshot = null, CleanupService? cleanup = null, ILogger? logger = null)
 	{
@@ -29,6 +30,7 @@ public partial class MainForm : Form
 		_logger = logger ?? CreateDefaultLogger(config);
 		screenshotService = screenshot ?? new ScreenshotService(config, _logger);
 		cleanupService = cleanup ?? new CleanupService(config, _logger);
+		activityLoggingService = new ActivityLoggingService(config, _logger);
 		
 		InitializeComponent();
 		Configure();
@@ -60,6 +62,7 @@ public partial class MainForm : Form
 		{
 			SystemEvents.PowerModeChanged -= OnPowerModeChanged;
 			SystemEvents.SessionSwitch -= OnSessionSwitch;
+			activityLoggingService.Dispose(); // flush last open session
 			components?.Dispose();
 		}
 		base.Dispose(disposing);
@@ -153,6 +156,7 @@ public partial class MainForm : Form
 		captureTimer.Stop();
 		try
 		{
+			activityLoggingService.Capture();
 			await Task.Run(() => screenshotService.CaptureAllScreens());
 		}
 		finally
