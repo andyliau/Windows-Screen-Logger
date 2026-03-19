@@ -19,14 +19,16 @@ public partial class MainForm : Form
 	private NotifyIcon notifyIcon;
 	private bool isRecording = false;
 	private readonly AppConfiguration config;
+	private readonly ILogger _logger;
 	private readonly ScreenshotService screenshotService;
 	private readonly CleanupService cleanupService;
 
-	public MainForm(AppConfiguration? configuration = null, ScreenshotService? screenshot = null, CleanupService? cleanup = null)
+	public MainForm(AppConfiguration? configuration = null, ScreenshotService? screenshot = null, CleanupService? cleanup = null, ILogger? logger = null)
 	{
 		config = configuration ?? AppConfiguration.Load();
-		screenshotService = screenshot ?? new ScreenshotService(config, new DefaultLogger());
-		cleanupService = cleanup ?? new CleanupService(config, new DefaultLogger());
+		_logger = logger ?? CreateDefaultLogger(config);
+		screenshotService = screenshot ?? new ScreenshotService(config, _logger);
+		cleanupService = cleanup ?? new CleanupService(config, _logger);
 		
 		InitializeComponent();
 		Configure();
@@ -43,7 +45,7 @@ public partial class MainForm : Form
 		clearTimer.Tick += (sender, e) => CleanOldScreenshots();
 		clearTimer.Start();
 
-		AppLogger.LogInformation($"Clear timer set to {config.CleanupIntervalHours} hours");
+		_logger.LogInformation($"Clear timer set to {config.CleanupIntervalHours} hours");
 
 		// Hide form on startup
 		this.WindowState = FormWindowState.Minimized;
@@ -116,7 +118,7 @@ public partial class MainForm : Form
 		captureInterval = config.CaptureInterval;
 		if (captureInterval <= 0)
 		{
-			AppLogger.LogError($"Invalid capture interval: {captureInterval}");
+			_logger.LogError($"Invalid capture interval: {captureInterval}");
 			MessageBox.Show("Invalid capture interval. Please check your settings.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			return;
 		}
@@ -134,35 +136,34 @@ public partial class MainForm : Form
 		captureTimer.Tick += CaptureTimer_Tick;
 		captureTimer.Start();
 		
-		AppLogger.LogInformation($"Capture timer configured with {captureInterval} second interval");
+		_logger.LogInformation($"Capture timer configured with {captureInterval} second interval");
 	}
 
 
-	private void CaptureTimer_Tick(object sender, EventArgs e)
+	private async void CaptureTimer_Tick(object sender, EventArgs e)
 	{
 		if (!isSessionLocked)
 		{
-			CaptureAllScreens();
+			await CaptureAllScreensAsync();
 		}
 	}
 
-	private void CaptureAllScreens()
+	private async Task CaptureAllScreensAsync()
 	{
+		captureTimer.Stop();
 		try
 		{
-			this.captureTimer.Stop();
-			screenshotService.CaptureAllScreens();
+			await Task.Run(() => screenshotService.CaptureAllScreens());
 		}
 		finally
 		{
-			this.captureTimer.Start();
-			Application.DoEvents();
+			captureTimer.Start();
 		}
 	}
 
 	private void ShowSettings(object sender, EventArgs e)
 	{
-		using var settingsForm = new SettingsForm();
+		using var settingsForm = new SettingsForm(config);
 		settingsForm.Icon = this.Icon;
 		if (settingsForm.ShowDialog() == DialogResult.OK)
 		{
@@ -239,8 +240,14 @@ public partial class MainForm : Form
 		return cleanupService.CleanOldScreenshots();
 	}
 
-	private void OnUninstallClick(object? sender, EventArgs e)
+	private static ILogger CreateDefaultLogger(AppConfiguration config)
 	{
+		var dl = new DefaultLogger();
+		dl.Initialize(config.EnableLogging, config.LogLevel);
+		return dl;
+	}
+
+	private void OnUninstallClick(object? sender, EventArgs e)	{
 		// Safety check
 		if (!SelfInstaller.IsInstalled() || !SelfInstaller.IsRunningFromInstallLocation())
 		{

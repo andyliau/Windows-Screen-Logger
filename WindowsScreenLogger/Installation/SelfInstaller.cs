@@ -36,11 +36,11 @@ namespace WindowsScreenLogger.Installation
                 "This application is running from a temporary location. " +
                 "Would you like to install it to your system?\n\n" +
                 "Installation will:\n" +
-                "• Copy the application to your user folder\n" +
-                "• Add it to Windows Apps & Features\n" +
-                "• Enable proper startup with Windows\n" +
-                "• Allow easy uninstallation\n" +
-                "• No administrator privileges required\n\n" +
+                "ï¿½ Copy the application to your user folder\n" +
+                "ï¿½ Add it to Windows Apps & Features\n" +
+                "ï¿½ Enable proper startup with Windows\n" +
+                "ï¿½ Allow easy uninstallation\n" +
+                "ï¿½ No administrator privileges required\n\n" +
                 "The application will automatically restart from the installed location.\n\n" +
                 "Install now?",
                 "Install Application",
@@ -168,7 +168,7 @@ del ""%~f0"" >nul 2>&1
         {
             try
             {
-                AppLogger.LogInformation("Checking for running WindowsScreenLogger processes");
+                System.Diagnostics.Debug.WriteLine("Checking for running WindowsScreenLogger processes");
                 
                 // Get current process to avoid terminating ourselves if we're the uninstaller
                 var currentProcess = Process.GetCurrentProcess();
@@ -181,11 +181,11 @@ del ""%~f0"" >nul 2>&1
                 
                 if (processes.Length == 0)
                 {
-                    AppLogger.LogInformation("No running WindowsScreenLogger instances found");
+                    System.Diagnostics.Debug.WriteLine("No running WindowsScreenLogger instances found");
                     return true;
                 }
                 
-                AppLogger.LogInformation($"Found {processes.Length} running WindowsScreenLogger instance(s)");
+                System.Diagnostics.Debug.WriteLine($"Found {processes.Length} running WindowsScreenLogger instance(s)");
                 
                 if (!quiet)
                 {
@@ -200,7 +200,7 @@ del ""%~f0"" >nul 2>&1
                     
                     if (result != DialogResult.Yes)
                     {
-                        AppLogger.LogInformation("User declined to close running instances");
+                        System.Diagnostics.Debug.WriteLine("User declined to close running instances");
                         return false;
                     }
                 }
@@ -210,12 +210,12 @@ del ""%~f0"" >nul 2>&1
                 {
                     try
                     {
-                        AppLogger.LogInformation($"Attempting to close process {process.Id} gracefully");
+                        System.Diagnostics.Debug.WriteLine($"Attempting to close process {process.Id} gracefully");
                         
                         // Try to close the main window gracefully first
                         if (!process.CloseMainWindow())
                         {
-                            AppLogger.LogWarning($"Process {process.Id} has no main window to close");
+                            System.Diagnostics.Debug.WriteLine($"Process {process.Id} has no main window to close");
                         }
                         
                         // Wait up to 10 seconds for graceful shutdown
@@ -223,28 +223,28 @@ del ""%~f0"" >nul 2>&1
                         
                         if (!exitedGracefully)
                         {
-                            AppLogger.LogWarning($"Process {process.Id} did not exit gracefully, terminating forcefully");
+                            System.Diagnostics.Debug.WriteLine($"Process {process.Id} did not exit gracefully, terminating forcefully");
                             process.Kill();
                             
                             // Wait up to 5 seconds for forced termination
                             if (!process.WaitForExit(5000))
                             {
-                                AppLogger.LogError($"Failed to terminate process {process.Id}");
+                                System.Diagnostics.Debug.WriteLine($"Failed to terminate process {process.Id}");
                                 allClosed = false;
                             }
                             else
                             {
-                                AppLogger.LogInformation($"Process {process.Id} terminated forcefully");
+                                System.Diagnostics.Debug.WriteLine($"Process {process.Id} terminated forcefully");
                             }
                         }
                         else
                         {
-                            AppLogger.LogInformation($"Process {process.Id} exited gracefully");
+                            System.Diagnostics.Debug.WriteLine($"Process {process.Id} exited gracefully");
                         }
                     }
                     catch (Exception ex)
                     {
-                        AppLogger.LogError($"Error terminating process {process.Id}: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"Error terminating process {process.Id}: {ex.Message}");
                         allClosed = false;
                     }
                     finally
@@ -256,20 +256,20 @@ del ""%~f0"" >nul 2>&1
                 if (allClosed)
                 {
                     // Additional wait to ensure all handles are released
-                    AppLogger.LogDebug("Waiting for handles to be released...");
+                    System.Diagnostics.Debug.WriteLine("Waiting for handles to be released...");
                     Thread.Sleep(2000);
-                    AppLogger.LogInformation("All running instances successfully shut down");
+                    System.Diagnostics.Debug.WriteLine("All running instances successfully shut down");
                 }
                 else
                 {
-                    AppLogger.LogError("Failed to shut down all running instances");
+                    System.Diagnostics.Debug.WriteLine("Failed to shut down all running instances");
                 }
                 
                 return allClosed;
             }
             catch (Exception ex)
             {
-                AppLogger.LogException(ex, "ShutdownRunningInstances");
+                System.Diagnostics.Debug.WriteLine(ex, "ShutdownRunningInstances");
                 return false;
             }
         }
@@ -278,12 +278,12 @@ del ""%~f0"" >nul 2>&1
         {
             try
             {
-                AppLogger.LogInformation($"Starting PerformUninstallation - quiet: {quiet}");
+                System.Diagnostics.Debug.WriteLine($"Starting PerformUninstallation - quiet: {quiet}");
                 
                 // Safety check - don't uninstall if not actually installed
                 if (!IsInstalled())
                 {
-                    AppLogger.LogUninstallOperation("Safety Check", false, "Application not installed");
+                    System.Diagnostics.Debug.WriteLine("Safety Check", false, "Application not installed");
                     if (!quiet)
                     {
                         MessageBox.Show("The application is not installed and cannot be uninstalled.", 
@@ -292,99 +292,99 @@ del ""%~f0"" >nul 2>&1
                     return;
                 }
 
-                AppLogger.LogInformation("Application installation verified, proceeding with uninstallation");
+                System.Diagnostics.Debug.WriteLine("Application installation verified, proceeding with uninstallation");
 
                 // Ensure all running instances are closed before proceeding
-                AppLogger.LogDebug("Checking for running instances to shut down");
+                System.Diagnostics.Debug.WriteLine("Checking for running instances to shut down");
                 bool allInstancesClosed = ShutdownRunningInstances(quiet);
                 
                 if (!allInstancesClosed)
                 {
-                    AppLogger.LogWarning("Not all running instances could be closed, proceeding with caution");
+                    System.Diagnostics.Debug.WriteLine("Not all running instances could be closed, proceeding with caution");
                 }
 
                 // Remove startup registration first
-                AppLogger.LogDebug("Removing startup registration");
+                System.Diagnostics.Debug.WriteLine("Removing startup registration");
                 try
                 {
                     StartupRegistry.SetStartupRegistration(false, InstalledExecutablePath);
-                    AppLogger.LogUninstallOperation("Startup Registry Removal", true, "Startup registration removed successfully");
+                    System.Diagnostics.Debug.WriteLine("Startup Registry Removal", true, "Startup registration removed successfully");
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.LogUninstallOperation("Startup Registry Removal", false, ex.Message);
+                    System.Diagnostics.Debug.WriteLine("Startup Registry Removal", false, ex.Message);
                 }
 
                 // Unregister from Windows Apps
-                AppLogger.LogDebug("Unregistering from Windows Apps & Features");
+                System.Diagnostics.Debug.WriteLine("Unregistering from Windows Apps & Features");
                 try
                 {
                     WindowsAppsRegistry.UnregisterApplication();
-                    AppLogger.LogUninstallOperation("Windows Apps Registry Removal", true, "Successfully removed from Windows Apps & Features");
+                    System.Diagnostics.Debug.WriteLine("Windows Apps Registry Removal", true, "Successfully removed from Windows Apps & Features");
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.LogUninstallOperation("Windows Apps Registry Removal", false, ex.Message);
+                    System.Diagnostics.Debug.WriteLine("Windows Apps Registry Removal", false, ex.Message);
                 }
 
                 // Clean up configuration files and logs
-                AppLogger.LogDebug("Cleaning up configuration and log files");
+                System.Diagnostics.Debug.WriteLine("Cleaning up configuration and log files");
                 try
                 {
                     CleanupConfigurationFiles();
-                    AppLogger.LogUninstallOperation("Configuration Cleanup", true, "Configuration and log files cleaned up");
+                    System.Diagnostics.Debug.WriteLine("Configuration Cleanup", true, "Configuration and log files cleaned up");
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.LogUninstallOperation("Configuration Cleanup", false, ex.Message);
+                    System.Diagnostics.Debug.WriteLine("Configuration Cleanup", false, ex.Message);
                 }
 
                 // Check if we can delete the parent directory immediately
                 bool immediateDeleteSuccess = false;
                 bool runningFromInstallLocation = IsRunningFromInstallLocation();
-                AppLogger.LogDebug($"Running from install location: {runningFromInstallLocation}");
+                System.Diagnostics.Debug.WriteLine($"Running from install location: {runningFromInstallLocation}");
                 
                 if (!runningFromInstallLocation && Directory.Exists(InstallPath))
                 {
                     try
                     {
-                        AppLogger.LogDebug($"Attempting immediate deletion of: {InstallPath}");
+                        System.Diagnostics.Debug.WriteLine($"Attempting immediate deletion of: {InstallPath}");
                         Directory.Delete(InstallPath, true);
                         immediateDeleteSuccess = true;
-                        AppLogger.LogUninstallOperation("Immediate Directory Deletion", true, $"Successfully removed: {InstallPath}");
+                        System.Diagnostics.Debug.WriteLine("Immediate Directory Deletion", true, $"Successfully removed: {InstallPath}");
                         Debug.WriteLine($"Successfully removed installation directory immediately: {InstallPath}");
                     }
                     catch (Exception ex)
                     {
-                        AppLogger.LogUninstallOperation("Immediate Directory Deletion", false, ex.Message);
+                        System.Diagnostics.Debug.WriteLine("Immediate Directory Deletion", false, ex.Message);
                         Debug.WriteLine($"Immediate deletion failed (expected if running from install location): {ex.Message}");
                     }
                 }
 
                 if (!immediateDeleteSuccess && Directory.Exists(InstallPath))
                 {
-                    AppLogger.LogDebug($"Scheduling delayed deletion of installation directory: {InstallPath}");
+                    System.Diagnostics.Debug.WriteLine($"Scheduling delayed deletion of installation directory: {InstallPath}");
                     Debug.WriteLine($"Scheduling delayed deletion of installation directory: {InstallPath}");
                     
                     // Use delayed deletion with both PowerShell and batch fallback
                     try
                     {
                         UninstallScriptManager.ExecutePowerShellUninstaller(InstallPath);
-                        AppLogger.LogUninstallOperation("Delayed Deletion (PowerShell)", true, "PowerShell uninstaller script created");
+                        System.Diagnostics.Debug.WriteLine("Delayed Deletion (PowerShell)", true, "PowerShell uninstaller script created");
                     }
                     catch (Exception ex)
                     {
-                        AppLogger.LogUninstallOperation("Delayed Deletion (PowerShell)", false, ex.Message);
+                        System.Diagnostics.Debug.WriteLine("Delayed Deletion (PowerShell)", false, ex.Message);
                         Debug.WriteLine($"PowerShell uninstaller creation failed, using batch fallback: {ex.Message}");
                         // Fallback to batch file if PowerShell fails
                         try
                         {
                             UninstallScriptManager.ExecuteBatchUninstaller(InstallPath);
-                            AppLogger.LogUninstallOperation("Delayed Deletion (Batch)", true, "Batch uninstaller script created as fallback");
+                            System.Diagnostics.Debug.WriteLine("Delayed Deletion (Batch)", true, "Batch uninstaller script created as fallback");
                         }
                         catch (Exception batchEx)
                         {
-                            AppLogger.LogUninstallOperation("Delayed Deletion (Batch)", false, batchEx.Message);
+                            System.Diagnostics.Debug.WriteLine("Delayed Deletion (Batch)", false, batchEx.Message);
                         }
                     }
                 }
@@ -397,18 +397,18 @@ del ""%~f0"" >nul 2>&1
                         : $"{AppName} has been successfully uninstalled.\n\n" +
                           "The installation folder and all associated files will be completely removed after this dialog is closed.";
                     
-                    AppLogger.LogInformation($"Showing completion message to user: {(immediateDeleteSuccess ? "immediate" : "delayed")} deletion");
+                    System.Diagnostics.Debug.WriteLine($"Showing completion message to user: {(immediateDeleteSuccess ? "immediate" : "delayed")} deletion");
                     MessageBox.Show(message, "Uninstall Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
 
                 // Initiate graceful shutdown
-                AppLogger.LogInformation("Initiating graceful application shutdown");
+                System.Diagnostics.Debug.WriteLine("Initiating graceful application shutdown");
                 InitiateGracefulShutdown();
             }
             catch (Exception ex)
             {
-                AppLogger.LogUninstallOperation("Complete Process", false, ex.Message);
-                AppLogger.LogException(ex, "PerformUninstallation");
+                System.Diagnostics.Debug.WriteLine("Complete Process", false, ex.Message);
+                System.Diagnostics.Debug.WriteLine(ex, "PerformUninstallation");
                 
                 if (!quiet)
                 {
@@ -432,11 +432,11 @@ del ""%~f0"" >nul 2>&1
                     try
                     {
                         Directory.Delete(appDataPath, true);
-                        AppLogger.LogDebug($"Deleted application data folder: {appDataPath}");
+                        System.Diagnostics.Debug.WriteLine($"Deleted application data folder: {appDataPath}");
                     }
                     catch (Exception ex)
                     {
-                        AppLogger.LogWarning($"Failed to delete application data folder {appDataPath}: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"Failed to delete application data folder {appDataPath}: {ex.Message}");
                     }
                 }
 
@@ -448,17 +448,17 @@ del ""%~f0"" >nul 2>&1
                     try
                     {
                         File.Delete(tempFile);
-                        AppLogger.LogDebug($"Deleted temporary file: {tempFile}");
+                        System.Diagnostics.Debug.WriteLine($"Deleted temporary file: {tempFile}");
                     }
                     catch (Exception ex)
                     {
-                        AppLogger.LogDebug($"Failed to delete temporary file {tempFile}: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"Failed to delete temporary file {tempFile}: {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                AppLogger.LogWarning($"Error during configuration cleanup: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error during configuration cleanup: {ex.Message}");
             }
         }
 
@@ -470,7 +470,7 @@ del ""%~f0"" >nul 2>&1
             try
             {
                 // Log final shutdown message
-                AppLogger.LogInformation("=== Application uninstalled and shutting down ===");
+                System.Diagnostics.Debug.WriteLine("=== Application uninstalled and shutting down ===");
                 
                 // Ensure all pending operations complete
                 Application.DoEvents();
@@ -487,26 +487,26 @@ del ""%~f0"" >nul 2>&1
                         Thread.Sleep(500);
                         
                         // Try graceful exit first
-                        AppLogger.LogDebug("Attempting graceful application exit");
+                        System.Diagnostics.Debug.WriteLine("Attempting graceful application exit");
                         Application.Exit();
                         
                         // Give it a moment to exit gracefully
                         Thread.Sleep(1000);
                         
                         // If we're still here, force exit
-                        AppLogger.LogDebug("Forcing application termination");
+                        System.Diagnostics.Debug.WriteLine("Forcing application termination");
                         Environment.Exit(0);
                     }
                     catch (Exception ex)
                     {
-                        AppLogger.LogError($"Error during shutdown: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"Error during shutdown: {ex.Message}");
                         Environment.Exit(1);
                     }
                 });
             }
             catch (Exception ex)
             {
-                AppLogger.LogError($"Error initiating graceful shutdown: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error initiating graceful shutdown: {ex.Message}");
                 // Force immediate exit if graceful shutdown fails
                 Environment.Exit(1);
             }

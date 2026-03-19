@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace WindowsScreenLogger.Tests
@@ -6,10 +7,10 @@ namespace WindowsScreenLogger.Tests
     public class BitmapMemoryTests
     {
         [Fact]
-        public void CaptureAllScreens_ShouldNotLeakMemory()
+        public async Task CaptureAllScreens_ShouldNotLeakMemory()
 		{
-			var differenceAt1 = RunCaptureMultipleTimes(1);
-			var differenceAt20 = RunCaptureMultipleTimes(10);
+			var differenceAt1 = await RunCaptureMultipleTimes(1);
+			var differenceAt20 = await RunCaptureMultipleTimes(10);
 
 			// After garbage collection, memory should be same on both
 			Assert.True(differenceAt20.afterCollection < differenceAt1.afterCollection * 2 + 200, 
@@ -23,17 +24,17 @@ differenceAt1: {differenceAt1.beforeCollection}
 differenceAt20: {differenceAt20.beforeCollection}");
 		}
 
-		private static (long beforeCollection, long afterCollection) RunCaptureMultipleTimes(int runTimes)
+		private static async Task<(long beforeCollection, long afterCollection)> RunCaptureMultipleTimes(int runTimes)
 		{
 			using (var form = new MainForm())
 			{
-				var captureMethod = typeof(MainForm).GetMethod("CaptureAllScreens", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+				var captureMethod = typeof(MainForm).GetMethod("CaptureAllScreensAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
 				var initialMemory = GC.GetTotalMemory(true);
 				for (int i = 0; i < runTimes; i++)
 				{
-					captureMethod.Invoke(form, null);
-					//DummyTest(runTimes); // Dummy test to simulate memory usage
+					var task = (Task)captureMethod!.Invoke(form, null)!;
+					await task;
 				}
 
 				var adjustment = runTimes * 200; // Adjust this value based on expected memory usage per capture

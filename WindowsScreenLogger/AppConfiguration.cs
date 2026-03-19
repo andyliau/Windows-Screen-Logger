@@ -103,27 +103,6 @@ namespace WindowsScreenLogger
         }
 
         /// <summary>
-        /// Migrates settings from the legacy Settings.Default to the new configuration system
-        /// </summary>
-        public void MigrateFromLegacySettings()
-        {
-            try
-            {
-                CaptureInterval = Settings.Default.CaptureInterval;
-                ImageSizePercentage = Settings.Default.ImageSizePercentage;
-                ImageQuality = Settings.Default.ImageQuality;
-                ClearDays = Settings.Default.ClearDays;
-
-                // Save the migrated configuration
-                Save();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to migrate legacy settings: {ex.Message}");
-            }
-        }
-
-        /// <summary>
         /// Validates the configuration values and corrects any invalid settings
         /// </summary>
         public void Validate()

@@ -13,8 +13,6 @@ namespace WindowsScreenLogger
 
         public void Initialize(bool enableLogging = false, string logLevel = "Information")
         {
-            if (_isInitialized) return;
-
             _currentLogLevel = logLevel;
 
             if (enableLogging)
