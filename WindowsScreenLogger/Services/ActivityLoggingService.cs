@@ -80,8 +80,7 @@ namespace WindowsScreenLogger.Services
                 if (windowChanged)
                 {
                     if ((now - _lastChangeWrite).TotalSeconds < MinChangeWriteSeconds) goto checkFlush;
-                    var cat = CategoryHints.Categorize(procName);
-                    Buffer($"{now:HH:mm:ss} {procName} \"{title}\" [{cat}]");
+                    Buffer($"{now:HH:mm:ss} {procName} \"{title}\"");
                     _lastProc = procName;
                     _lastTitle = title;
                     _lastChangeWrite = now;

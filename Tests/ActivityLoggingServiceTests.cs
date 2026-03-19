@@ -55,7 +55,7 @@ namespace WindowsScreenLogger.Tests
 
             var lines = ReadLines();
             Assert.Equal(2, lines.Count);
-            Assert.Matches(@"^\d{2}:\d{2}:\d{2} code ""Program\.cs - VS Code"" \[ide\]$", lines[0]);
+            Assert.Matches(@"^\d{2}:\d{2}:\d{2} code ""Program\.cs - VS Code""$", lines[0]);
         }
 
         [Fact]
@@ -231,8 +231,7 @@ namespace WindowsScreenLogger.Tests
         {
             var now       = DateTime.Now;
             var truncated = title.Length > 80 ? title[..80] + "…" : title;
-            var cat       = CategoryHints.Categorize(proc);
-            var line      = $"{now:HH:mm:ss} {proc} \"{truncated}\" [{cat}]";
+            var line      = $"{now:HH:mm:ss} {proc} \"{truncated}\"";
 
             var buffer = (List<string>)BufferField.GetValue(_sut)!;
             buffer.Add(line);
