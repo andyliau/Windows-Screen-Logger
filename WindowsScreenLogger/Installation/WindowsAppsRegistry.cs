@@ -22,13 +22,13 @@ namespace WindowsScreenLogger.Installation
                 if (userKey != null)
                 {
                     SetRegistryValues(userKey, installPath, executablePath);
-                    AppLogger.LogRegistryOperation("RegisterApplication", uninstallKey, true, "Successfully registered in Windows Apps & Features");
+                    System.Diagnostics.Debug.WriteLine("RegisterApplication", uninstallKey, true, "Successfully registered in Windows Apps & Features");
                     Debug.WriteLine("Successfully registered in current user Windows Apps");
                 }
             }
             catch (Exception ex)
             {
-                AppLogger.LogRegistryOperation("RegisterApplication", AppGuid, false, ex.Message);
+                System.Diagnostics.Debug.WriteLine("RegisterApplication", AppGuid, false, ex.Message);
                 throw new Exception($"Failed to register application in Windows Apps: {ex.Message}");
             }
         }
@@ -39,12 +39,12 @@ namespace WindowsScreenLogger.Installation
             {
                 string uninstallKey = $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{AppGuid}";
                 Registry.CurrentUser.DeleteSubKey(uninstallKey, false);
-                AppLogger.LogRegistryOperation("UnregisterApplication", uninstallKey, true, "Successfully removed from Windows Apps & Features");
+                System.Diagnostics.Debug.WriteLine("UnregisterApplication", uninstallKey, true, "Successfully removed from Windows Apps & Features");
                 Debug.WriteLine("Successfully unregistered from current user Windows Apps");
             }
             catch (Exception ex)
             {
-                AppLogger.LogRegistryOperation("UnregisterApplication", AppGuid, false, ex.Message);
+                System.Diagnostics.Debug.WriteLine("UnregisterApplication", AppGuid, false, ex.Message);
                 Debug.WriteLine($"Failed to unregister from current user registry: {ex.Message}");
             }
         }
@@ -68,8 +68,8 @@ namespace WindowsScreenLogger.Installation
             key.SetValue("HelpLink", "");
             key.SetValue("URLInfoAbout", "");
 
-            AppLogger.LogDebug($"Registry values set - UninstallString: \"{executablePath}\" uninstall");
-            AppLogger.LogDebug($"Registry values set - QuietUninstallString: \"{executablePath}\" uninstall --quiet");
+            System.Diagnostics.Debug.WriteLine($"Registry values set - UninstallString: \"{executablePath}\" uninstall");
+            System.Diagnostics.Debug.WriteLine($"Registry values set - QuietUninstallString: \"{executablePath}\" uninstall --quiet");
         }
 
         private static int GetInstallationSize(string executablePath)
@@ -99,15 +99,15 @@ namespace WindowsScreenLogger.Installation
                     var uninstallString = userKey.GetValue("UninstallString")?.ToString();
                     var quietUninstallString = userKey.GetValue("QuietUninstallString")?.ToString();
                     
-                    AppLogger.LogDebug($"Current UninstallString: {uninstallString ?? "NULL"}");
-                    AppLogger.LogDebug($"Current QuietUninstallString: {quietUninstallString ?? "NULL"}");
+                    System.Diagnostics.Debug.WriteLine($"Current UninstallString: {uninstallString ?? "NULL"}");
+                    System.Diagnostics.Debug.WriteLine($"Current QuietUninstallString: {quietUninstallString ?? "NULL"}");
                     
                     return (uninstallString, quietUninstallString);
                 }
             }
             catch (Exception ex)
             {
-                AppLogger.LogDebug($"Failed to read uninstall strings from registry: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Failed to read uninstall strings from registry: {ex.Message}");
             }
             
             return (null, null);
@@ -124,27 +124,27 @@ namespace WindowsScreenLogger.Installation
             
             if (string.IsNullOrEmpty(uninstallString))
             {
-                AppLogger.LogWarning("UninstallString is missing or empty");
+                System.Diagnostics.Debug.WriteLine("UninstallString is missing or empty");
                 isValid = false;
             }
             else if (!uninstallString.Contains("uninstall") || uninstallString.Contains("/uninstall"))
             {
-                AppLogger.LogWarning($"UninstallString format incorrect: {uninstallString}");
+                System.Diagnostics.Debug.WriteLine($"UninstallString format incorrect: {uninstallString}");
                 isValid = false;
             }
             
             if (string.IsNullOrEmpty(quietUninstallString))
             {
-                AppLogger.LogWarning("QuietUninstallString is missing or empty");
+                System.Diagnostics.Debug.WriteLine("QuietUninstallString is missing or empty");
                 isValid = false;
             }
             else if (!quietUninstallString.Contains("--quiet") || quietUninstallString.Contains("/quiet"))
             {
-                AppLogger.LogWarning($"QuietUninstallString format incorrect: {quietUninstallString}");
+                System.Diagnostics.Debug.WriteLine($"QuietUninstallString format incorrect: {quietUninstallString}");
                 isValid = false;
             }
             
-            AppLogger.LogInformation($"Registry entries validation result: {(isValid ? "VALID" : "INVALID")}");
+            System.Diagnostics.Debug.WriteLine($"Registry entries validation result: {(isValid ? "VALID" : "INVALID")}");
             return isValid;
         }
     }

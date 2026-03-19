@@ -3,6 +3,7 @@ using SkiaSharp;
 using System.Drawing.Imaging;
 using Microsoft.Win32;
 using WindowsScreenLogger.Installation;
+using WindowsScreenLogger.Services;
 using Timer = System.Windows.Forms.Timer;
 
 namespace WindowsScreenLogger;
@@ -18,10 +19,16 @@ public partial class MainForm : Form
 	private NotifyIcon notifyIcon;
 	private bool isRecording = false;
 	private readonly AppConfiguration config;
+	private readonly ILogger _logger;
+	private readonly ScreenshotService screenshotService;
+	private readonly CleanupService cleanupService;
 
-	public MainForm(AppConfiguration? configuration = null)
+	public MainForm(AppConfiguration? configuration = null, ScreenshotService? screenshot = null, CleanupService? cleanup = null, ILogger? logger = null)
 	{
 		config = configuration ?? AppConfiguration.Load();
+		_logger = logger ?? CreateDefaultLogger(config);
+		screenshotService = screenshot ?? new ScreenshotService(config, _logger);
+		cleanupService = cleanup ?? new CleanupService(config, _logger);
 		
 		InitializeComponent();
 		Configure();
@@ -38,7 +45,7 @@ public partial class MainForm : Form
 		clearTimer.Tick += (sender, e) => CleanOldScreenshots();
 		clearTimer.Start();
 
-		AppLogger.LogInformation($"Clear timer set to {config.CleanupIntervalHours} hours");
+		_logger.LogInformation($"Clear timer set to {config.CleanupIntervalHours} hours");
 
 		// Hide form on startup
 		this.WindowState = FormWindowState.Minimized;
@@ -111,7 +118,7 @@ public partial class MainForm : Form
 		captureInterval = config.CaptureInterval;
 		if (captureInterval <= 0)
 		{
-			AppLogger.LogError($"Invalid capture interval: {captureInterval}");
+			_logger.LogError($"Invalid capture interval: {captureInterval}");
 			MessageBox.Show("Invalid capture interval. Please check your settings.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			return;
 		}
@@ -129,110 +136,34 @@ public partial class MainForm : Form
 		captureTimer.Tick += CaptureTimer_Tick;
 		captureTimer.Start();
 		
-		AppLogger.LogInformation($"Capture timer configured with {captureInterval} second interval");
+		_logger.LogInformation($"Capture timer configured with {captureInterval} second interval");
 	}
 
 
-	private void CaptureTimer_Tick(object sender, EventArgs e)
+	private async void CaptureTimer_Tick(object sender, EventArgs e)
 	{
 		if (!isSessionLocked)
 		{
-			CaptureAllScreens();
+			await CaptureAllScreensAsync();
 		}
 	}
 
-	private void CaptureAllScreens()
+	private async Task CaptureAllScreensAsync()
 	{
-		var savePath = GetSavePath();
+		captureTimer.Stop();
 		try
 		{
-			this.captureTimer.Stop();
-
-			// Calculate the total size of the virtual screen
-			Rectangle bounds = SystemInformation.VirtualScreen;
-
-			using var screenBitmap = new Bitmap(bounds.Width, bounds.Height);
-			using var screenGraphics = Graphics.FromImage(screenBitmap);
-
-			// Capture the entire virtual screen
-			screenGraphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
-
-			// Resize the image based on settings
-			int percentage = config.ImageSizePercentage;
-			bool resizeNeeded = percentage != 100;
-			int newWidth = bounds.Width * percentage / 100;
-			int newHeight = bounds.Height * percentage / 100;
-
-			// Convert System.Drawing.Bitmap to SkiaSharp.SKBitmap
-			using var ms = new MemoryStream();
-			screenBitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-			ms.Seek(0, SeekOrigin.Begin);
-			using var skBitmap = SKBitmap.Decode(ms);
-
-			// Resize with SkiaSharp using SKSamplingOptions
-			var samplingOptions = new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None);
-			SKImage image = null;
-			try
-			{
-				if (resizeNeeded)
-				{
-					using var resized = skBitmap.Resize(new SKImageInfo(newWidth, newHeight), samplingOptions);
-					image = SKImage.FromBitmap(resized);
-				}
-				else
-				{
-					image = SKImage.FromBitmap(skBitmap);
-				}
-
-				// Save based on configured format and quality
-				var quality = config.ImageQuality;
-				var format = config.ScreenshotFormat.ToLowerInvariant() switch
-				{
-					"png" => SKEncodedImageFormat.Png,
-					"bmp" => SKEncodedImageFormat.Bmp,
-					"webp" => SKEncodedImageFormat.Webp,
-					_ => SKEncodedImageFormat.Jpeg
-				};
-
-				var data = image.Encode(format, quality);
-				var extension = config.ScreenshotFormat.ToLowerInvariant() == "jpeg" ? "jpg" : config.ScreenshotFormat.ToLowerInvariant();
-				string filePath = Path.Combine(savePath, $"screenshot_{DateTime.Now:HHmmss}.{extension}");
-				
-				using var fileStream = File.OpenWrite(filePath);
-				data.SaveTo(fileStream);
-
-				AppLogger.LogTrace($"Screenshot saved: {filePath}");
-			}
-			finally
-			{
-				image?.Dispose();
-			}
-		}
-		catch (Exception ex)
-		{
-			AppLogger.LogException(ex, "Screen capture");
-			// MessageBox.Show($"An error occurred while capturing the screen: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			await Task.Run(() => screenshotService.CaptureAllScreens());
 		}
 		finally
 		{
-			this.captureTimer.Start();
+			captureTimer.Start();
 		}
-
-		GC.Collect();
-		Application.DoEvents();
-	}
-
-	private string GetSavePath()
-	{
-		var rootPath = config.GetEffectiveSavePath();
-		var path = Path.Combine(rootPath, DateTime.Now.ToString("yyyy-MM-dd"));
-		Directory.CreateDirectory(path);
-		return path;
 	}
 
 	private void ShowSettings(object sender, EventArgs e)
 	{
-		using var settingsForm = new SettingsForm();
+		using var settingsForm = new SettingsForm(config);
 		settingsForm.Icon = this.Icon;
 		if (settingsForm.ShowDialog() == DialogResult.OK)
 		{
@@ -244,7 +175,7 @@ public partial class MainForm : Form
 	{
 		try
 		{
-			var savePath = GetSavePath();
+			var savePath = screenshotService.GetSavePath();
 			Process.Start("explorer.exe", savePath);
 		}
 		catch (Exception ex)
@@ -299,55 +230,24 @@ public partial class MainForm : Form
 
 	private void OnCleanClick(object? sender, EventArgs e)
 	{
-		CleanOldScreenshots();
-		MessageBox.Show($"Old screenshots (older than {config.ClearDays} days) have been removed.", 
+		int deleted = CleanOldScreenshots();
+		MessageBox.Show($"Old screenshots (older than {config.ClearDays} days) have been removed. Deleted {deleted} folder(s).", 
 			"Cleanup Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
 	}
 
-	private void CleanOldScreenshots()
+	private int CleanOldScreenshots()
 	{
-		var rootPath = config.GetEffectiveSavePath();
-		if (!Directory.Exists(rootPath))
-		{
-			return;
-		}
-
-		var subDirectories = Directory.GetDirectories(rootPath);
-		int dirDeleted = 0;
-
-		foreach (var directory in subDirectories)
-		{
-			var creationTime = Directory.GetCreationTime(directory);
-			if ((DateTime.Now - creationTime).TotalDays > config.ClearDays)
-			{
-				try
-				{
-					Directory.Delete(directory, true); // Use true to delete directories and their contents
-					dirDeleted++;
-					AppLogger.LogDebug($"Deleted old screenshot directory: {directory}");
-				}
-				catch (Exception ex)
-				{
-					// Log error or silently continue
-					AppLogger.LogWarning($"Error deleting directory {directory}: {ex.Message}");
-					UpdateStatus($"Error deleting file {directory}: {ex.Message}");
-				}
-			}
-		}
-
-		var message = $"Cleaned up {dirDeleted} screenshots folders older than {config.ClearDays} days";
-		AppLogger.LogInformation(message);
-		UpdateStatus(message);
+		return cleanupService.CleanOldScreenshots();
 	}
 
-	private void UpdateStatus(string message)
+	private static ILogger CreateDefaultLogger(AppConfiguration config)
 	{
-		// Update status in UI or log
-		Debug.WriteLine(message);
+		var dl = new DefaultLogger();
+		dl.Initialize(config.EnableLogging, config.LogLevel);
+		return dl;
 	}
 
-	private void OnUninstallClick(object? sender, EventArgs e)
-	{
+	private void OnUninstallClick(object? sender, EventArgs e)	{
 		// Safety check
 		if (!SelfInstaller.IsInstalled() || !SelfInstaller.IsRunningFromInstallLocation())
 		{
@@ -359,10 +259,10 @@ public partial class MainForm : Form
 		var result = MessageBox.Show(
 			"Are you sure you want to uninstall Windows Screen Logger?\n\n" +
 			"This will:\n" +
-			"• Remove the application from your system\n" +
-			"• Remove it from Windows Apps & Features\n" +
-			"• Disable startup with Windows\n" +
-			"• Keep your screenshot files\n\n" +
+			"ï¿½ Remove the application from your system\n" +
+			"ï¿½ Remove it from Windows Apps & Features\n" +
+			"ï¿½ Disable startup with Windows\n" +
+			"ï¿½ Keep your screenshot files\n\n" +
 			"Continue with uninstallation?",
 			"Confirm Uninstall",
 			MessageBoxButtons.YesNo,

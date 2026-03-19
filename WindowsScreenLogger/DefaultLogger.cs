@@ -3,69 +3,51 @@ using System.Diagnostics;
 namespace WindowsScreenLogger
 {
     /// <summary>
-    /// Enhanced logging system for the application
+    /// Default implementation of ILogger that matches the AppLogger functionality
     /// </summary>
-    public static class AppLogger
+    public class DefaultLogger : ILogger
     {
-        private static string? _logFilePath;
-        private static bool _isInitialized = false;
-        private static LogLevel _currentLogLevel = LogLevel.Information;
+        private string? _logFilePath;
+        private bool _isInitialized = false;
+        private string _currentLogLevel = "Information";
 
-        public enum LogLevel
+        public void Initialize(bool enableLogging = false, string logLevel = "Information")
         {
-            Trace = 0,
-            Debug = 1,
-            Information = 2,
-            Warning = 3,
-            Error = 4,
-            Critical = 5
-        }
-
-        /// <summary>
-        /// Initializes the logging system
-        /// </summary>
-        public static void Initialize(bool enableLogging = false, LogLevel logLevel = LogLevel.Information)
-        {
-            if (_isInitialized) return;
-
             _currentLogLevel = logLevel;
 
             if (enableLogging)
             {
                 var logDirectory = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "WindowsScreenLogger",
+                    ApplicationConstants.ApplicationName,
                     "Logs");
 
                 Directory.CreateDirectory(logDirectory);
 
-                _logFilePath = Path.Combine(logDirectory, $"WindowsScreenLogger_{DateTime.Now:yyyyMMdd}.log");
+                _logFilePath = Path.Combine(logDirectory, $"{ApplicationConstants.ApplicationName}_{DateTime.Now:yyyyMMdd}.log");
             }
 
             _isInitialized = true;
             LogInformation("Logging system initialized");
         }
 
-        public static void LogTrace(string message) => Log(LogLevel.Trace, message);
-        public static void LogDebug(string message) => Log(LogLevel.Debug, message);
-        public static void LogInformation(string message) => Log(LogLevel.Information, message);
-        public static void LogWarning(string message) => Log(LogLevel.Warning, message);
-        public static void LogError(string message) => Log(LogLevel.Error, message);
-        public static void LogCritical(string message) => Log(LogLevel.Critical, message);
+        public void LogTrace(string message) => Log("Trace", message);
+        public void LogDebug(string message) => Log("Debug", message);
+        public void LogInformation(string message) => Log("Information", message);
+        public void LogWarning(string message) => Log("Warning", message);
+        public void LogError(string message) => Log("Error", message);
+        public void LogCritical(string message) => Log("Critical", message);
 
-        public static void LogException(Exception exception, string? context = null)
+        public void LogException(Exception exception, string? context = null)
         {
-            var message = string.IsNullOrEmpty(context) 
+            var message = string.IsNullOrEmpty(context)
                 ? $"Exception: {exception.Message}\nStack Trace: {exception.StackTrace}"
                 : $"Exception in {context}: {exception.Message}\nStack Trace: {exception.StackTrace}";
-            
+
             LogError(message);
         }
 
-        /// <summary>
-        /// Logs command line arguments being processed
-        /// </summary>
-        public static void LogCommandLineArgs(string[] args)
+        public void LogCommandLineArgs(string[] args)
         {
             if (args.Length == 0)
             {
@@ -80,12 +62,9 @@ namespace WindowsScreenLogger
             }
         }
 
-        /// <summary>
-        /// Logs uninstall operation details
-        /// </summary>
-        public static void LogUninstallOperation(string operation, bool success, string? details = null)
+        public void LogUninstallOperation(string operation, bool success, string? details = null)
         {
-            var level = success ? LogLevel.Information : LogLevel.Error;
+            var level = success ? "Information" : "Error";
             var message = $"Uninstall {operation}: {(success ? "SUCCESS" : "FAILED")}";
             if (!string.IsNullOrEmpty(details))
             {
@@ -94,12 +73,9 @@ namespace WindowsScreenLogger
             Log(level, message);
         }
 
-        /// <summary>
-        /// Logs registry operation details
-        /// </summary>
-        public static void LogRegistryOperation(string operation, string key, bool success, string? details = null)
+        public void LogRegistryOperation(string operation, string key, bool success, string? details = null)
         {
-            var level = success ? LogLevel.Debug : LogLevel.Warning;
+            var level = success ? "Debug" : "Warning";
             var message = $"Registry {operation} for '{key}': {(success ? "SUCCESS" : "FAILED")}";
             if (!string.IsNullOrEmpty(details))
             {
@@ -108,12 +84,12 @@ namespace WindowsScreenLogger
             Log(level, message);
         }
 
-        private static void Log(LogLevel level, string message)
+        private void Log(string level, string message)
         {
-            if (!_isInitialized || level < _currentLogLevel) return;
+            if (!_isInitialized || !ShouldLog(level)) return;
 
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            var levelString = level.ToString().ToUpper().PadRight(11);
+            var levelString = level.ToUpper().PadRight(11);
             var logEntry = $"[{timestamp}] [{levelString}] {message}";
 
             // Always write to Debug output
@@ -143,15 +119,30 @@ namespace WindowsScreenLogger
             }
         }
 
-        /// <summary>
-        /// Gets the current log file path
-        /// </summary>
-        public static string? GetLogFilePath() => _logFilePath;
+        private bool ShouldLog(string level)
+        {
+            var levelOrder = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Trace", 0 },
+                { "Debug", 1 },
+                { "Information", 2 },
+                { "Warning", 3 },
+                { "Error", 4 },
+                { "Critical", 5 }
+            };
 
-        /// <summary>
-        /// Cleans up old log files
-        /// </summary>
-        public static void CleanupOldLogs(int daysToKeep = 7)
+            if (!levelOrder.TryGetValue(level, out var levelValue))
+                return true;
+
+            if (!levelOrder.TryGetValue(_currentLogLevel, out var currentValue))
+                return true;
+
+            return levelValue >= currentValue;
+        }
+
+        public string? GetLogFilePath() => _logFilePath;
+
+        public void CleanupOldLogs(int daysToKeep = 7)
         {
             if (string.IsNullOrEmpty(_logFilePath)) return;
 
@@ -161,7 +152,7 @@ namespace WindowsScreenLogger
                 if (string.IsNullOrEmpty(logDirectory) || !Directory.Exists(logDirectory)) return;
 
                 var cutoffDate = DateTime.Now.AddDays(-daysToKeep);
-                var logFiles = Directory.GetFiles(logDirectory, "WindowsScreenLogger_*.log");
+                var logFiles = Directory.GetFiles(logDirectory, $"{ApplicationConstants.ApplicationName}_*.log");
 
                 foreach (var logFile in logFiles)
                 {
@@ -186,10 +177,7 @@ namespace WindowsScreenLogger
             }
         }
 
-        /// <summary>
-        /// Logs application startup information
-        /// </summary>
-        public static void LogStartup()
+        public void LogStartup()
         {
             try
             {
@@ -214,10 +202,7 @@ namespace WindowsScreenLogger
             }
         }
 
-        /// <summary>
-        /// Logs application shutdown information
-        /// </summary>
-        public static void LogShutdown()
+        public void LogShutdown()
         {
             LogInformation("=== Windows Screen Logger Shutting Down ===");
         }

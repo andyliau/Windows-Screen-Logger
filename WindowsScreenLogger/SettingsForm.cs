@@ -5,8 +5,11 @@ namespace WindowsScreenLogger;
 
 public partial class SettingsForm : Form
 {
-	public SettingsForm()
+	private readonly AppConfiguration _config;
+
+	public SettingsForm(AppConfiguration config)
 	{
+		_config = config;
 		InitializeComponent();
 	}
 
@@ -191,22 +194,21 @@ public partial class SettingsForm : Form
 
 	private void SettingsForm_Load(object sender, EventArgs e)
 	{
-		// Load settings
-		numericUpDownInterval.Value = Settings.Default.CaptureInterval;
+		numericUpDownInterval.Value = _config.CaptureInterval;
 		checkBoxStartWithWindows.Checked = GetStartup();
-		numericUpDownImageSize.Value = Settings.Default.ImageSizePercentage;
-		trackBarQuality.Value = Settings.Default.ImageQuality;
-		numericUpDownClearDays.Value = Settings.Default.ClearDays;
+		numericUpDownImageSize.Value = _config.ImageSizePercentage;
+		trackBarQuality.Value = _config.ImageQuality;
+		numericUpDownClearDays.Value = _config.ClearDays;
 	}
 
 	private void ButtonSave_Click(object sender, EventArgs e)
 	{
-		// Save settings
-		Settings.Default.CaptureInterval = (int)numericUpDownInterval.Value;
-		Settings.Default.ImageSizePercentage = (int)numericUpDownImageSize.Value;
-		Settings.Default.ImageQuality = trackBarQuality.Value;
-		Settings.Default.ClearDays = (int)numericUpDownClearDays.Value;
-		Settings.Default.Save();
+		_config.CaptureInterval = (int)numericUpDownInterval.Value;
+		_config.ImageSizePercentage = (int)numericUpDownImageSize.Value;
+		_config.ImageQuality = trackBarQuality.Value;
+		_config.ClearDays = (int)numericUpDownClearDays.Value;
+		_config.StartWithWindows = checkBoxStartWithWindows.Checked;
+		_config.Save();
 
 		// Set or remove startup entry
 		SetStartup(checkBoxStartWithWindows.Checked);

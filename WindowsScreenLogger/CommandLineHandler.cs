@@ -11,6 +11,13 @@ namespace WindowsScreenLogger
     public static class CommandLineHandler
     {
         private static bool isGuiInitialized = false;
+        private static ILogger _logger = new DefaultLogger();
+
+        /// <summary>
+        /// Sets the logger instance to use for all command line operations.
+        /// Must be called before TryHandleLegacyCommand or CreateRootCommand.
+        /// </summary>
+        public static void SetLogger(ILogger logger) => _logger = logger;
 
         /// <summary>
         /// Creates and configures the root command with all subcommands and options
@@ -87,12 +94,12 @@ namespace WindowsScreenLogger
         {
             if (args.Length == 0) return false;
 
-            AppLogger.LogDebug($"Checking for legacy command format in: {string.Join(" ", args)}");
+            _logger.LogDebug($"Checking for legacy command format in: {string.Join(" ", args)}");
 
             // Handle legacy /uninstall format
             if (args.Any(arg => arg.Equals("/uninstall", StringComparison.OrdinalIgnoreCase)))
             {
-                AppLogger.LogInformation("Detected legacy /uninstall command, converting to modern format");
+                _logger.LogInformation("Detected legacy /uninstall command, converting to modern format");
                 bool quiet = args.Any(arg => arg.Equals("/quiet", StringComparison.OrdinalIgnoreCase));
                 
                 try
@@ -102,7 +109,7 @@ namespace WindowsScreenLogger
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.LogException(ex, "Legacy uninstall command handling");
+                    _logger.LogException(ex, "Legacy uninstall command handling");
                     throw;
                 }
             }
@@ -110,7 +117,7 @@ namespace WindowsScreenLogger
             // Handle legacy /install format
             if (args.Any(arg => arg.Equals("/install", StringComparison.OrdinalIgnoreCase)))
             {
-                AppLogger.LogInformation("Detected legacy /install command, converting to modern format");
+                _logger.LogInformation("Detected legacy /install command, converting to modern format");
                 bool silent = args.Any(arg => arg.Equals("/silent", StringComparison.OrdinalIgnoreCase));
                 
                 try
@@ -120,7 +127,7 @@ namespace WindowsScreenLogger
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.LogException(ex, "Legacy install command handling");
+                    _logger.LogException(ex, "Legacy install command handling");
                     throw;
                 }
             }
@@ -183,22 +190,22 @@ namespace WindowsScreenLogger
         {
             try
             {
-                AppLogger.LogInformation($"Starting uninstall command - quiet: {quiet}, force: {force}");
+                _logger.LogInformation($"Starting uninstall command - quiet: {quiet}, force: {force}");
                 
                 if (!quiet)
                 {
                     ApplicationConfiguration.Initialize();
                     isGuiInitialized = true;
-                    AppLogger.LogDebug("GUI initialized for uninstall command");
+                    _logger.LogDebug("GUI initialized for uninstall command");
                 }
 
                 bool isInstalled = SelfInstaller.IsInstalled();
-                AppLogger.LogInformation($"Installation check result: {isInstalled}");
+                _logger.LogInformation($"Installation check result: {isInstalled}");
                 
                 if (!force && !isInstalled)
                 {
                     string message = "Application is not installed.";
-                    AppLogger.LogUninstallOperation("Validation", false, "Application not installed");
+                    _logger.LogUninstallOperation("Validation", false, "Application not installed");
                     
                     if (quiet)
                     {
@@ -213,13 +220,13 @@ namespace WindowsScreenLogger
                 }
 
                 // Check for and shut down any running instances before uninstalling
-                AppLogger.LogInformation("Checking for running instances of the application");
+                _logger.LogInformation("Checking for running instances of the application");
                 bool instancesShutDown = SelfInstaller.ShutdownRunningInstances(quiet);
                 
                 if (!instancesShutDown && !force)
                 {
                     string message = "Cannot uninstall: Unable to shut down running instances of the application.";
-                    AppLogger.LogUninstallOperation("Instance Shutdown", false, message);
+                    _logger.LogUninstallOperation("Instance Shutdown", false, message);
                     
                     if (quiet)
                     {
@@ -234,15 +241,15 @@ namespace WindowsScreenLogger
                     return;
                 }
 
-                AppLogger.LogInformation("Calling SelfInstaller.PerformUninstallation");
+                _logger.LogInformation("Calling SelfInstaller.PerformUninstallation");
                 SelfInstaller.PerformUninstallation(quiet);
-                AppLogger.LogUninstallOperation("Complete", true, "Uninstallation process completed successfully");
+                _logger.LogUninstallOperation("Complete", true, "Uninstallation process completed successfully");
             }
             catch (Exception ex)
             {
                 string errorMessage = $"Uninstallation failed: {ex.Message}";
-                AppLogger.LogUninstallOperation("Complete", false, errorMessage);
-                AppLogger.LogException(ex, "HandleUninstallCommand");
+                _logger.LogUninstallOperation("Complete", false, errorMessage);
+                _logger.LogException(ex, "HandleUninstallCommand");
                 
                 if (!quiet && isGuiInitialized)
                 {
@@ -299,7 +306,7 @@ namespace WindowsScreenLogger
             Console.WriteLine($"Windows Screen Logger v{version}");
             Console.WriteLine($"File Version: {fileVersion}");
             Console.WriteLine($"Target Framework: .NET 9.0");
-            Console.WriteLine($"Copyright © 2024 WindowsScreenLogger");
+            Console.WriteLine($"Copyright ï¿½ 2024 WindowsScreenLogger");
         }
 
         private static void HandleRunCommand(bool noInstallPrompt = false, string? configPath = null)
