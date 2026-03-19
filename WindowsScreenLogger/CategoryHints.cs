@@ -56,12 +56,26 @@ namespace WindowsScreenLogger
             { "figma",          "design" },
             { "photoshop",      "design" },
             { "illustrator",    "design" },
+            { "gimp",           "design" },
+            { "blender",        "design" },
 
-            // Entertainment / social
+            // Gaming
+            { "steam",          "gaming" },
+            { "EpicGamesLauncher", "gaming" },
+            { "Battle.net",     "gaming" },
+            { "LeagueClient",   "gaming" },
+            { "javaw",          "gaming" },  // Minecraft
+            { "RobloxPlayerBeta","gaming" },
+            { "Cyberpunk2077",  "gaming" },
+
+            // Entertainment / media consumption
             { "spotify",        "entertainment" },
             { "vlc",            "entertainment" },
-            { "netflix",        "entertainment" },
-            { "youtube",        "entertainment" },
+            { "wmplayer",       "entertainment" },
+            { "Netflix",        "entertainment" },
+            { "DisneyPlus",     "entertainment" },
+            { "YouTube",        "entertainment" },
+            { "Prime Video",    "entertainment" },
         };
 
         /// <summary>Returns a category string, or "other" if the process is not in the hint table.</summary>

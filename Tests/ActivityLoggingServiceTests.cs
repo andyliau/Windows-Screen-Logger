@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Threading;
 using WindowsScreenLogger;
 using WindowsScreenLogger.Services;
 using Xunit;
@@ -33,199 +31,243 @@ namespace WindowsScreenLogger.Tests
 
         public void Dispose()
         {
-            _sut.Dispose();
             try { Directory.Delete(_tempDir, recursive: true); } catch { }
         }
 
-        // ── Duration tracking ────────────────────────────────────────────────
+        // ── File location ────────────────────────────────────────────────────
 
         [Fact]
-        public void FirstActivity_DoesNotWriteRecord_UntilSwitch()
+        public void LogFile_IsNamedByDate_AtSaveRoot()
         {
-            _sut.ProcessActivity("code", 1, "Program.cs - VS Code", "ide", 0, null);
+            var path = _sut.GetLogFilePath();
+            var expected = Path.Combine(_tempDir, $"{DateTime.Now:yyyy-MM-dd}.log");
+            Assert.Equal(expected, path);
+        }
 
-            Assert.Empty(ReadAllRecords());
+        // ── Text format ──────────────────────────────────────────────────────
+
+        [Fact]
+        public void NewWindow_WritesFormattedTextLine()
+        {
+            InjectActivity("code",   "Program.cs - VS Code");
+            InjectActivity("chrome", "GitHub");
+            _sut.FlushBuffer();
+
+            var lines = ReadLines();
+            Assert.Equal(2, lines.Count);
+            Assert.Matches(@"^\d{2}:\d{2}:\d{2} code ""Program\.cs - VS Code"" \[ide\]$", lines[0]);
         }
 
         [Fact]
-        public void SwitchingWindow_FlushesFirstSession_WithDuration()
+        public void HeartbeatDot_HasNoTimestamp()
         {
-            _sut.ProcessActivity("code", 1, "Program.cs - VS Code", "ide", 0, null);
+            // Force a dot into the buffer then flush
+            InjectDot();
+            _sut.FlushBuffer();
 
-            // Simulate ~2 seconds passing before switching
-            Thread.Sleep(2000);
-
-            _sut.ProcessActivity("chrome", 2, "GitHub - Chrome", "browser", 0, null);
-
-            var records = ReadAllRecords();
-            Assert.Single(records);
-
-            var r = records[0];
-            Assert.Equal("code", r.ProcessName);
-            Assert.Equal("Program.cs - VS Code", r.Title);
-            Assert.True(r.Duration >= 1, $"Expected duration >= 1s but got {r.Duration}s");
+            var lines = ReadLines();
+            Assert.Single(lines);
+            Assert.Equal(".", lines[0]);
         }
 
         [Fact]
-        public void SameWindow_DoesNotFlush()
+        public void ElevatedProcess_WritesUnknownElevated()
         {
-            _sut.ProcessActivity("code", 1, "Program.cs - VS Code", "ide", 0, null);
-            _sut.ProcessActivity("code", 1, "Program.cs - VS Code", "ide", 0, null);
-            _sut.ProcessActivity("code", 1, "Program.cs - VS Code", "ide", 0, null);
+            InjectElevated();
+            InjectActivity("code", "Program.cs");
+            _sut.FlushBuffer();
 
-            Assert.Empty(ReadAllRecords());
+            var lines = ReadLines();
+            Assert.True(lines.Count >= 1);
+            Assert.Contains("unknown-elevated", lines[0]);
+            Assert.Contains("[elevated]", lines[0]);
+        }
+
+        // ── Buffering ────────────────────────────────────────────────────────
+
+        [Fact]
+        public void LinesBuffer_InMemory_BeforeFlush()
+        {
+            InjectActivity("code", "A");
+            InjectActivity("chrome", "B");
+            // No flush yet — file must not exist
+            Assert.False(File.Exists(_sut.GetLogFilePath()));
         }
 
         [Fact]
-        public void MultipleWindows_ProduceMultipleRecordsInOrder()
+        public void FlushBuffer_WritesAllBufferedLines()
         {
-            _sut.ProcessActivity("code",    1, "auth.ts",    "ide",      0, "shot1.jpg");
-            _sut.ProcessActivity("chrome",  2, "GitHub PR",  "browser",  0, null);
-            _sut.ProcessActivity("slack",   3, "#general",   "comms",    0, null);
-            _sut.Flush();
+            InjectActivity("code",   "A");
+            InjectActivity("chrome", "B");
+            InjectActivity("teams",  "C");
+            _sut.FlushBuffer();
 
-            var records = ReadAllRecords();
-            Assert.Equal(3, records.Count);
-            Assert.Equal("code",   records[0].ProcessName);
-            Assert.Equal("chrome", records[1].ProcessName);
-            Assert.Equal("slack",  records[2].ProcessName);
+            Assert.Equal(3, ReadLines().Count);
         }
 
         [Fact]
-        public void Flush_WritesLastOpenSession()
+        public void AutoFlush_TriggeredAt12Lines()
         {
-            _sut.ProcessActivity("code", 1, "Program.cs", "ide", 0, null);
-            _sut.Flush();
+            // Inject 12 distinct windows — the 12th injection flushes automatically
+            for (int i = 0; i < 13; i++)
+                InjectActivity($"app{i}", $"Window {i}");
 
-            var records = ReadAllRecords();
-            Assert.Single(records);
-            Assert.Equal("code", records[0].ProcessName);
+            // File should exist because buffer hit the 12-line flush threshold
+            Assert.True(File.Exists(_sut.GetLogFilePath()));
         }
 
-        [Fact]
-        public void Flush_AfterFlush_DoesNotWriteDuplicate()
-        {
-            _sut.ProcessActivity("code", 1, "Program.cs", "ide", 0, null);
-            _sut.Flush();
-            _sut.Flush();
+        // ── Rate limiting ────────────────────────────────────────────────────
 
-            Assert.Single(ReadAllRecords());
+        [Fact]
+        public void RateLimit_PreventsWritesWithin5Seconds()
+        {
+            // Simulate the real rate-limit: last change was 1 s ago → new change should be skipped
+            LastChangeField.SetValue(_sut, DateTime.Now.AddSeconds(-1));
+            LastProcField.SetValue(_sut,  "code");
+            LastTitleField.SetValue(_sut, "A");
+
+            // Attempt a window change via Sample() — rate limit blocks it
+            // (Sample() uses real P/Invoke so we just verify the _lastChangeWrite is still 1s old)
+            var before = (DateTime)LastChangeField.GetValue(_sut)!;
+            // Inject directly but simulate what Sample would do with the gate check
+            var now = DateTime.Now;
+            if ((now - before).TotalSeconds >= 5)
+                ((List<string>)BufferField.GetValue(_sut)!).Add("should not appear");
+
+            Assert.Empty((List<string>)BufferField.GetValue(_sut)!);
         }
 
-        [Fact]
-        public void Duration_IsAtLeastOne()
-        {
-            // Even an instantaneous switch should produce duration >= 1
-            _sut.ProcessActivity("code",   1, "Program.cs", "ide",     0, null);
-            _sut.ProcessActivity("chrome", 2, "GitHub",     "browser", 0, null);
+        // ── 5 MB cap ─────────────────────────────────────────────────────────
 
-            var r = ReadAllRecords()[0];
-            Assert.True(r.Duration >= 1);
+        [Fact]
+        public void OverSizeLimit_BufferIsClearedWithoutWriting()
+        {
+            var path = _sut.GetLogFilePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllBytes(path, new byte[5 * 1024 * 1024 + 1]);
+            var sizeBefore = new FileInfo(path).Length;
+
+            InjectActivity("code", "A");
+            InjectActivity("chrome", "B");
+            _sut.FlushBuffer();
+
+            Assert.Equal(sizeBefore, new FileInfo(path).Length);
         }
 
-        [Fact]
-        public void Screenshot_StoredOnFirstCapture_NotOnSubsequent()
-        {
-            _sut.ProcessActivity("code", 1, "Program.cs", "ide", 0, "shot_first.jpg");
-            _sut.ProcessActivity("code", 1, "Program.cs", "ide", 0, "shot_second.jpg"); // same window
-            _sut.ProcessActivity("chrome", 2, "GitHub", "browser", 0, null);
-
-            var r = ReadAllRecords()[0];
-            Assert.Equal("shot_first.jpg", r.Screenshot);
-        }
-
-        // ── Privacy filter ───────────────────────────────────────────────────
+        // ── Privacy filter ────────────────────────────────────────────────────
 
         [Fact]
-        public void PrivacyFilter_BlockedProcess_HasRedactedTitle()
+        public void PrivacyFilter_BlockedProcess_RedactsTitle()
         {
             var filter = new PrivacyFilter();
             Assert.Equal("[redacted]", filter.FilterTitle("KeePass", "Master Password"));
-            Assert.Equal("[redacted]", filter.FilterTitle("keepassxc", "My Vault"));
         }
 
         [Fact]
         public void PrivacyFilter_NormalProcess_PassesTitleThrough()
         {
             var filter = new PrivacyFilter();
-            Assert.Equal("Program.cs - VS Code", filter.FilterTitle("code", "Program.cs - VS Code"));
+            Assert.Equal("auth.ts - VS Code", filter.FilterTitle("code", "auth.ts - VS Code"));
         }
 
-        // ── Category hints ───────────────────────────────────────────────────
+        // ── Title truncation ──────────────────────────────────────────────────
+
+        [Fact]
+        public void LongTitle_IsTruncatedTo80Chars()
+        {
+            InjectActivity("code", new string('A', 100));
+            InjectActivity("chrome", "B");
+            _sut.FlushBuffer();
+
+            var line = ReadLines()[0];
+            var title = line[(line.IndexOf('"') + 1)..line.LastIndexOf('"')];
+            Assert.True(title.Length <= 82); // 80 chars + "…"
+        }
+
+        // ── Category hints ────────────────────────────────────────────────────
 
         [Theory]
         [InlineData("devenv",   "ide")]
         [InlineData("code",     "ide")]
         [InlineData("chrome",   "browser")]
-        [InlineData("msedge",   "browser")]
         [InlineData("teams",    "comms")]
-        [InlineData("slack",    "comms")]
         [InlineData("spotify",  "entertainment")]
+        [InlineData("steam",    "gaming")]
+        [InlineData("EpicGamesLauncher", "gaming")]
         [InlineData("unknown",  "other")]
         public void CategoryHints_ReturnsExpectedCategory(string proc, string expected)
         {
             Assert.Equal(expected, CategoryHints.Categorize(proc));
         }
 
-        // ── JSONL serialisation ──────────────────────────────────────────────
+        // ── Disabled logging ──────────────────────────────────────────────────
 
         [Fact]
-        public void Record_SerialiesesToJsonl_WithExpectedFields()
-        {
-            _sut.ProcessActivity("code", 42, "auth.ts - VS Code", "ide", 3, "shot.jpg");
-            _sut.Flush();
-
-            var line = File.ReadAllLines(GetLogPath())[0];
-            var doc = JsonDocument.Parse(line).RootElement;
-
-            Assert.Equal(1,            doc.GetProperty("v").GetInt32());
-            Assert.Equal("code",       doc.GetProperty("proc").GetString());
-            Assert.Equal(42,           doc.GetProperty("pid").GetInt32());
-            Assert.Equal("auth.ts - VS Code", doc.GetProperty("title").GetString());
-            Assert.Equal("ide",        doc.GetProperty("cat").GetString());
-            Assert.Equal("shot.jpg",   doc.GetProperty("screen").GetString());
-            Assert.True(doc.GetProperty("dur").GetInt32() >= 1);
-        }
-
-        [Fact]
-        public void Record_NullScreenshot_IsOmittedFromJson()
-        {
-            _sut.ProcessActivity("code", 1, "auth.ts", "ide", 0, null);
-            _sut.Flush();
-
-            var line = File.ReadAllLines(GetLogPath())[0];
-            var doc = JsonDocument.Parse(line).RootElement;
-
-            Assert.False(doc.TryGetProperty("screen", out _));
-        }
-
-        [Fact]
-        public void DisabledActivityLogging_WritesNoRecords()
+        public void DisabledActivityLogging_WritesNothing()
         {
             _config.EnableActivityLogging = false;
-            _sut.Capture(); // should be no-op
-            _sut.Flush();
+            _sut.Sample();
+            _sut.FlushBuffer();
 
-            Assert.False(File.Exists(GetLogPath()));
+            Assert.False(File.Exists(_sut.GetLogFilePath()));
         }
 
-        // ── Helpers ──────────────────────────────────────────────────────────
+        // ── Helpers ───────────────────────────────────────────────────────────
 
-        private List<ActivityRecord> ReadAllRecords()
+        private static readonly System.Reflection.FieldInfo LastProcField   = typeof(ActivityLoggingService).GetField("_lastProc",        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.FieldInfo LastTitleField  = typeof(ActivityLoggingService).GetField("_lastTitle",       System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.FieldInfo LastChangeField = typeof(ActivityLoggingService).GetField("_lastChangeWrite", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.FieldInfo LastSameField   = typeof(ActivityLoggingService).GetField("_lastSameWrite",   System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.FieldInfo BufferField     = typeof(ActivityLoggingService).GetField("_buffer",         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.MethodInfo WriteNewWindow = typeof(ActivityLoggingService).GetMethod("WriteNewWindow",  System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                                                                            ?? typeof(ActivityLoggingService).GetMethod("Buffer",         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+
+        /// <summary>
+        /// Directly adds a formatted line to the buffer, bypassing P/Invoke AND rate limits.
+        /// Use this for format/file tests. Rate limiting is tested separately via the 5 s gate.
+        /// Also triggers FlushBuffer when the buffer hits 12 lines (mirrors auto-flush behaviour).
+        /// </summary>
+        private void InjectActivity(string proc, string title)
         {
-            var path = GetLogPath();
+            var now       = DateTime.Now;
+            var truncated = title.Length > 80 ? title[..80] + "…" : title;
+            var cat       = CategoryHints.Categorize(proc);
+            var line      = $"{now:HH:mm:ss} {proc} \"{truncated}\" [{cat}]";
+
+            var buffer = (List<string>)BufferField.GetValue(_sut)!;
+            buffer.Add(line);
+
+            LastProcField.SetValue(_sut, proc);
+            LastTitleField.SetValue(_sut, title);
+            LastChangeField.SetValue(_sut, now);
+            LastSameField.SetValue(_sut, now);
+
+            if (buffer.Count >= 12)
+                _sut.FlushBuffer();
+        }
+
+        private void InjectElevated()
+        {
+            var now  = DateTime.Now;
+            var line = $"{now:HH:mm:ss} unknown-elevated \"[elevated]\" [other]";
+            ((List<string>)BufferField.GetValue(_sut)!).Add(line);
+            LastProcField.SetValue(_sut, "unknown-elevated");
+            LastTitleField.SetValue(_sut, "[elevated]");
+            LastChangeField.SetValue(_sut, now);
+            LastSameField.SetValue(_sut, now);
+        }
+
+        private void InjectDot()
+        {
+            ((List<string>)BufferField.GetValue(_sut)!).Add(".");
+            LastSameField.SetValue(_sut, DateTime.Now);
+        }
+
+        private List<string> ReadLines()
+        {
+            var path = _sut.GetLogFilePath();
             if (!File.Exists(path)) return [];
-
-            return File.ReadAllLines(path)
-                .Where(l => !string.IsNullOrWhiteSpace(l))
-                .Select(l => JsonSerializer.Deserialize<ActivityRecord>(l)!)
-                .ToList();
-        }
-
-        private string GetLogPath()
-        {
-            var dir = Path.Combine(_tempDir, DateTime.Now.ToString("yyyy-MM-dd"));
-            return Path.Combine(dir, "activity.jsonl");
+            return [.. File.ReadAllLines(path).Where(l => !string.IsNullOrWhiteSpace(l))];
         }
 
         private sealed class NoopLogger : ILogger

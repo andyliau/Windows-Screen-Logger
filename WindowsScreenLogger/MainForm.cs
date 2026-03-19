@@ -12,6 +12,7 @@ public partial class MainForm : Form
 {
 	private Timer captureTimer;
 	private Timer clearTimer;
+	private Timer activityTimer;
 	private int captureInterval;
 	private ImageCodecInfo jpegEncoder;
 	private bool isSessionLocked;
@@ -62,7 +63,9 @@ public partial class MainForm : Form
 		{
 			SystemEvents.PowerModeChanged -= OnPowerModeChanged;
 			SystemEvents.SessionSwitch -= OnSessionSwitch;
-			activityLoggingService.Dispose(); // flush last open session
+			activityTimer?.Stop();
+			activityTimer?.Dispose();
+			activityLoggingService.Flush(); // write any buffered lines before exit
 			components?.Dispose();
 		}
 		base.Dispose(disposing);
@@ -140,6 +143,50 @@ public partial class MainForm : Form
 		captureTimer.Start();
 		
 		_logger.LogInformation($"Capture timer configured with {captureInterval} second interval");
+
+		// Activity logging — separate timer, independent of screenshot interval
+		if (activityTimer != null)
+		{
+			activityTimer.Stop();
+			activityTimer.Tick -= ActivityTimer_Tick;
+		}
+
+		var sampleInterval = Math.Max(1, Math.Min(30, config.ActivitySampleIntervalSeconds));
+		activityTimer = new Timer { Interval = sampleInterval * 1000 };
+		activityTimer.Tick += ActivityTimer_Tick;
+
+		if (config.EnableActivityLogging)
+		{
+			activityTimer.Start();
+			_logger.LogInformation($"Activity logging enabled — sampling every {sampleInterval}s. Log: {activityLoggingService.GetLogFilePath()}");
+		}
+		else
+		{
+			_logger.LogInformation("Activity logging is disabled. Set enableActivityLogging=true in config.json to track your daily work activity.");
+			ShowActivityLoggingIntroIfNeeded();
+		}
+	}
+
+	private void ShowActivityLoggingIntroIfNeeded()
+	{
+		if (config.ActivityLoggingIntroShown) return;
+		config.ActivityLoggingIntroShown = true;
+		config.Save();
+		// Delay slightly so the tray icon is visible before the balloon appears
+		Task.Delay(3000).ContinueWith(_ =>
+			notifyIcon.ShowBalloonTip(
+				8000,
+				"Activity Logging Available",
+				"Windows Screen Logger can track which apps you use and for how long.\n" +
+				"Enable it in Settings → Activity Logging, or set enableActivityLogging=true in config.json.",
+				ToolTipIcon.Info),
+			TaskScheduler.FromCurrentSynchronizationContext());
+	}
+
+	private void ActivityTimer_Tick(object sender, EventArgs e)
+	{
+		if (!isSessionLocked)
+			activityLoggingService.Sample();
 	}
 
 
@@ -156,7 +203,6 @@ public partial class MainForm : Form
 		captureTimer.Stop();
 		try
 		{
-			activityLoggingService.Capture();
 			await Task.Run(() => screenshotService.CaptureAllScreens());
 		}
 		finally

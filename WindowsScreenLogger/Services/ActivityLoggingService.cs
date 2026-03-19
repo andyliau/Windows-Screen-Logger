@@ -1,39 +1,49 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace WindowsScreenLogger.Services
 {
     /// <summary>
-    /// Tracks which window the user is focused on and writes a completed
-    /// <see cref="ActivityRecord"/> (with duration) to a daily JSONL file each time
-    /// the foreground window changes.
+    /// Samples the foreground window every 5 s and writes activity to a daily log file
+    /// in batches (one file append per minute, not per sample).
     ///
-    /// Design:
-    ///   • One record per window session, not per tick → meaningful durations
-    ///   • <1 ms overhead per tick (all P/Invoke calls are fast)
-    ///   • Call <see cref="Flush"/> (or <see cref="Dispose"/>) on app exit to persist
-    ///     the last open session
-    ///   • No new NuGet dependencies
+    /// Text format — one line per record, no schema:
+    ///   HH:mm:ss proc "title" [cat]      — window changed or first record
+    ///   .                                — same window heartbeat (no timestamp needed)
+    ///
+    /// Timing defaults:
+    ///   • Sample interval : 5 s  (configurable via ActivitySampleIntervalSeconds)
+    ///   • Buffer flush    : 60 s or when buffer reaches 12 lines, whichever comes first
+    ///   • Window-change write gate : 5 s  minimum between full records
+    ///   • Heartbeat (dot) gate     : 60 s minimum between dots
+    ///
+    /// Performance contract:
+    ///   • Runs on the WinForms UI thread — no locks needed
+    ///   • P/Invoke calls: <0.1 ms each
+    ///   • File I/O: at most once per minute (buffered)
+    ///   • Max daily file: 5 MB hard cap
     /// </summary>
     public class ActivityLoggingService : IDisposable
     {
+        private const long MaxFileSizeBytes    = 5 * 1024 * 1024;
+        private const int  MinChangeWriteSeconds = 5;
+        private const int  SameHeartbeatSeconds  = 60;
+        private const int  FlushIntervalSeconds  = 60;
+        private const int  FlushLineCount        = 12;
+        private const int  MaxTitleLength        = 80;
+
         private readonly AppConfiguration _config;
         private readonly ILogger _logger;
         private readonly PrivacyFilter _privacy = new();
-        private static readonly JsonSerializerOptions JsonOpts = new()
-        {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
+        private readonly List<string> _buffer = [];
 
-        // Tracks the window the user is currently in.
-        private sealed record ActiveSession(
-            string ProcName, int Pid, string Title, string Cat,
-            DateTime Start, string? Screenshot);
-
-        private ActiveSession? _session;
+        private string? _lastProc;
+        private string? _lastTitle;
+        private DateTime _lastChangeWrite = DateTime.MinValue;
+        private DateTime _lastSameWrite   = DateTime.MinValue;
+        private DateTime _lastFlush       = DateTime.Now;
+        private bool _overSizeLogged;
 
         public ActivityLoggingService(AppConfiguration config, ILogger logger)
         {
@@ -42,11 +52,12 @@ namespace WindowsScreenLogger.Services
         }
 
         /// <summary>
-        /// Called once per capture tick. Reads the foreground window and, if the user
-        /// has switched windows, flushes the previous session record with its duration.
+        /// Called on each activity timer tick (every 5 s by default).
+        /// Buffers at most one line, then flushes to disk when the buffer is full
+        /// (12 lines) or 60 s have elapsed since the last flush.
         /// No-op when <see cref="AppConfiguration.EnableActivityLogging"/> is false.
         /// </summary>
-        public void Capture(string? screenshotFilename = null)
+        public void Sample()
         {
             if (!_config.EnableActivityLogging) return;
 
@@ -55,116 +66,108 @@ namespace WindowsScreenLogger.Services
                 var hwnd = NativeMethods.GetForegroundWindow();
                 if (hwnd == IntPtr.Zero) return;
 
-                var titleSb = new StringBuilder(512);
+                var titleSb = new System.Text.StringBuilder(512);
                 NativeMethods.GetWindowText(hwnd, titleSb, titleSb.Capacity);
                 NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
 
-                var procName = ResolveProcessName((int)pid);
-                var title = _privacy.FilterTitle(procName, titleSb.ToString());
-                var idle = (int)(GetIdleMilliseconds() / 1000);
+                var (procName, isElevated) = ResolveProcessName((int)pid);
+                var rawTitle = isElevated ? "[elevated]" : titleSb.ToString();
+                var title = Truncate(_privacy.FilterTitle(procName, rawTitle));
 
-                ProcessActivity(procName, (int)pid, title,
-                    CategoryHints.Categorize(procName), idle, screenshotFilename);
+                var now = DateTime.Now;
+                var windowChanged = procName != _lastProc || title != _lastTitle;
+
+                if (windowChanged)
+                {
+                    if ((now - _lastChangeWrite).TotalSeconds < MinChangeWriteSeconds) goto checkFlush;
+                    var cat = CategoryHints.Categorize(procName);
+                    Buffer($"{now:HH:mm:ss} {procName} \"{title}\" [{cat}]");
+                    _lastProc = procName;
+                    _lastTitle = title;
+                    _lastChangeWrite = now;
+                    _lastSameWrite = now;
+                }
+                else
+                {
+                    if ((now - _lastSameWrite).TotalSeconds < SameHeartbeatSeconds) goto checkFlush;
+                    Buffer(".");
+                    _lastSameWrite = now;
+                }
+
+                checkFlush:
+                if (_buffer.Count >= FlushLineCount ||
+                    (now - _lastFlush).TotalSeconds >= FlushIntervalSeconds)
+                {
+                    FlushBuffer();
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogException(ex, "Activity logging");
+                _logger.LogException(ex, "Activity sampling");
             }
         }
 
-        /// <summary>
-        /// Core session-tracking logic. Exposed internally so tests can drive it
-        /// without going through P/Invoke.
-        /// </summary>
-        internal void ProcessActivity(
-            string procName, int pid, string title, string cat,
-            int idleSeconds, string? screenshotFilename)
-        {
-            var now = DateTime.UtcNow;
+        /// <summary>Writes any buffered lines to disk. Called automatically on schedule and on Dispose.</summary>
+        public void Flush() => FlushBuffer();
 
-            if (_session == null)
+        public void Dispose() => FlushBuffer();
+
+        /// <summary>Returns the path of today's activity log file (may not yet exist).</summary>
+        public string GetLogFilePath()
+        {
+            var root = _config.GetEffectiveSavePath();
+            return Path.Combine(root, $"{DateTime.Now:yyyy-MM-dd}.log");
+        }
+
+        private void Buffer(string line) => _buffer.Add(line);
+
+        internal void FlushBuffer()
+        {
+            if (_buffer.Count == 0) return;
+
+            var path = GetLogFilePath();
+            if (IsOverSizeLimit(path))
             {
-                _session = new ActiveSession(procName, pid, title, cat, now, screenshotFilename);
+                _buffer.Clear();
                 return;
             }
 
-            // Same window — no flush needed.
-            if (_session.ProcName == procName && _session.Title == title) return;
-
-            // Window changed — close the old session with its duration.
-            FlushSession(_session, end: now, idleSeconds: idleSeconds);
-
-            _session = new ActiveSession(procName, pid, title, cat, now, screenshotFilename);
-        }
-
-        /// <summary>
-        /// Writes the currently-open session to disk. Call on app exit so the last
-        /// window session is not lost.
-        /// </summary>
-        public void Flush()
-        {
-            if (_session == null) return;
-
-            var idleSeconds = 0;
-            try { idleSeconds = (int)(GetIdleMilliseconds() / 1000); } catch { }
-
-            FlushSession(_session, end: DateTime.UtcNow, idleSeconds: idleSeconds);
-            _session = null;
-        }
-
-        public void Dispose() => Flush();
-
-        private void FlushSession(ActiveSession session, DateTime end, int idleSeconds)
-        {
-            var record = new ActivityRecord
+            try
             {
-                Timestamp = session.Start.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                Duration = Math.Max(1, (int)(end - session.Start).TotalSeconds),
-                ProcessName = session.ProcName,
-                ProcessId = session.Pid,
-                Title = session.Title,
-                IdleSeconds = idleSeconds,
-                Category = session.Cat,
-                Screenshot = session.Screenshot
-            };
-
-            Append(record);
-        }
-
-        private void Append(ActivityRecord record)
-        {
-            var path = GetLogPath();
-            var json = JsonSerializer.Serialize(record, JsonOpts);
-            File.AppendAllText(path, json + "\n");
-            _logger.LogTrace($"Activity logged: {record.ProcessName} — {record.Title} ({record.Duration}s)");
-        }
-
-        private string GetLogPath()
-        {
-            var root = _config.GetEffectiveSavePath();
-            var dir = Path.Combine(root, DateTime.Now.ToString(ApplicationConstants.ScreenshotDateFormat));
-            Directory.CreateDirectory(dir);
-            return Path.Combine(dir, "activity.jsonl");
-        }
-
-        private static string ResolveProcessName(int pid)
-        {
-            try { return Process.GetProcessById(pid).ProcessName; }
-            catch { return pid.ToString(); }
-        }
-
-        /// <summary>
-        /// Uses unchecked uint arithmetic to handle TickCount rollover (~49-day cycle).
-        /// </summary>
-        private static uint GetIdleMilliseconds()
-        {
-            var info = new NativeMethods.LASTINPUTINFO
+                Directory.CreateDirectory(_config.GetEffectiveSavePath());
+                File.AppendAllLines(path, _buffer);
+                _logger.LogTrace($"Activity flush: {_buffer.Count} line(s) → {Path.GetFileName(path)}");
+            }
+            catch (Exception ex)
             {
-                cbSize = (uint)Marshal.SizeOf<NativeMethods.LASTINPUTINFO>()
-            };
-            return NativeMethods.GetLastInputInfo(ref info)
-                ? unchecked((uint)Environment.TickCount - info.dwTime)
-                : 0;
+                _logger.LogException(ex, "Activity log flush");
+            }
+            finally
+            {
+                _buffer.Clear();
+                _lastFlush = DateTime.Now;
+            }
         }
+
+        private bool IsOverSizeLimit(string path)
+        {
+            if (!File.Exists(path)) return false;
+            if (new FileInfo(path).Length < MaxFileSizeBytes) return false;
+            if (!_overSizeLogged)
+            {
+                _logger.LogWarning("Activity log for today has reached the 5 MB limit. No further entries will be written today.");
+                _overSizeLogged = true;
+            }
+            return true;
+        }
+
+        private static (string name, bool elevated) ResolveProcessName(int pid)
+        {
+            try   { return (System.Diagnostics.Process.GetProcessById(pid).ProcessName, false); }
+            catch { return ("unknown-elevated", true); }
+        }
+
+        private static string Truncate(string s)
+            => s.Length <= MaxTitleLength ? s : s[..MaxTitleLength] + "…";
     }
 }

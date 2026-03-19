@@ -46,10 +46,24 @@ namespace WindowsScreenLogger
 
         /// <summary>
         /// When true, activity records (active window, process, idle time) are appended
-        /// as JSONL alongside screenshots. Default is false (opt-in).
+        /// as a daily text log alongside screenshots. Default is false (opt-in).
         /// </summary>
         [JsonPropertyName("enableActivityLogging")]
         public bool EnableActivityLogging { get; set; } = false;
+
+        /// <summary>
+        /// How often (in seconds) the foreground window is sampled for activity.
+        /// Lower values catch window switches faster but use marginally more CPU.
+        /// Valid range: 1–30. Default: 5.
+        /// </summary>
+        [JsonPropertyName("activitySampleIntervalSeconds")]
+        public int ActivitySampleIntervalSeconds { get; set; } = 5;
+
+        /// <summary>
+        /// Set to true once the first-run activity logging intro notification has been shown.
+        /// </summary>
+        [JsonPropertyName("activityLoggingIntroShown")]
+        public bool ActivityLoggingIntroShown { get; set; } = false;
 
         /// <summary>
         /// Default configuration file path

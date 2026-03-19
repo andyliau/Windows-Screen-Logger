@@ -15,9 +15,10 @@ namespace WindowsScreenLogger.Services
         }
 
         /// <summary>
-        /// Cleans up screenshot directories older than the configured number of days
+        /// Cleans up screenshot directories older than the configured number of days,
+        /// and deletes matching daily activity log files (YYYY-MM-DD.log).
         /// </summary>
-        /// <returns>Number of directories deleted</returns>
+        /// <returns>Number of items deleted (directories + log files combined)</returns>
         public int CleanOldScreenshots()
         {
             var rootPath = config.GetEffectiveSavePath();
@@ -27,18 +28,18 @@ namespace WindowsScreenLogger.Services
                 return 0;
             }
 
-            var subDirectories = Directory.GetDirectories(rootPath);
-            int dirDeleted = 0;
+            int deleted = 0;
 
-            foreach (var directory in subDirectories)
+            // Delete screenshot date directories
+            foreach (var directory in Directory.GetDirectories(rootPath))
             {
                 var creationTime = Directory.GetCreationTime(directory);
                 if ((DateTime.Now - creationTime).TotalDays > config.ClearDays)
                 {
                     try
                     {
-                        Directory.Delete(directory, true); // Use true to delete directories and their contents
-                        dirDeleted++;
+                        Directory.Delete(directory, true);
+                        deleted++;
                         logger.LogDebug($"Deleted old screenshot directory: {directory}");
                     }
                     catch (Exception ex)
@@ -48,10 +49,27 @@ namespace WindowsScreenLogger.Services
                 }
             }
 
-            var message = $"Cleaned up {dirDeleted} screenshot folders older than {config.ClearDays} days";
-            logger.LogInformation(message);
+            // Delete activity log files (YYYY-MM-DD.log) that are beyond the retention window
+            foreach (var logFile in Directory.GetFiles(rootPath, "????.??.??.log"))
+            {
+                var creationTime = File.GetCreationTime(logFile);
+                if ((DateTime.Now - creationTime).TotalDays > config.ClearDays)
+                {
+                    try
+                    {
+                        File.Delete(logFile);
+                        deleted++;
+                        logger.LogDebug($"Deleted old activity log: {logFile}");
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning($"Error deleting activity log {logFile}: {ex.Message}");
+                    }
+                }
+            }
 
-            return dirDeleted;
+            logger.LogInformation($"Cleaned up {deleted} item(s) older than {config.ClearDays} days");
+            return deleted;
         }
 
         /// <summary>
