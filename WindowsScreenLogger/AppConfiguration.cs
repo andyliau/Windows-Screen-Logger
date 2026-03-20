@@ -49,7 +49,7 @@ namespace WindowsScreenLogger
         /// as a daily text log alongside screenshots. Default is false (opt-in).
         /// </summary>
         [JsonPropertyName("enableActivityLogging")]
-        public bool EnableActivityLogging { get; set; } = false;
+        public bool EnableActivityLogging { get; set; } = true;
 
         /// <summary>
         /// How often (in seconds) the foreground window is sampled for activity.

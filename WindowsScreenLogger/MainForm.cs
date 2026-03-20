@@ -164,11 +164,11 @@ public partial class MainForm : Form
 		{
 			activityTimer.Start();
 			_logger.LogInformation($"Activity logging enabled — sampling every {sampleInterval}s. Log: {activityLoggingService.GetLogFilePath()}");
+			ShowActivityLoggingIntroIfNeeded();
 		}
 		else
 		{
-			_logger.LogInformation("Activity logging is disabled. Set enableActivityLogging=true in config.json to track your daily work activity.");
-			ShowActivityLoggingIntroIfNeeded();
+			_logger.LogInformation("Activity logging is disabled. Enable it in Settings → Activity Logging.");
 		}
 
 		// Reflect activity logging state in the tray tooltip
@@ -182,13 +182,12 @@ public partial class MainForm : Form
 		if (config.ActivityLoggingIntroShown) return;
 		config.ActivityLoggingIntroShown = true;
 		config.Save();
-		// Delay slightly so the tray icon is visible before the balloon appears
 		Task.Delay(3000).ContinueWith(_ =>
 			notifyIcon.ShowBalloonTip(
 				8000,
-				"Activity Logging Available",
-				"Windows Screen Logger can track which apps you use and for how long.\n" +
-				"Enable it in Settings → Activity Logging, or set enableActivityLogging=true in config.json.",
+				"Activity Logging Active",
+				"Windows Screen Logger is tracking your active windows to help summarise your daily work.\n" +
+				"Logs are saved alongside your screenshots. Disable anytime in Settings → Activity Logging.",
 				ToolTipIcon.Info),
 			TaskScheduler.FromCurrentSynchronizationContext());
 	}
