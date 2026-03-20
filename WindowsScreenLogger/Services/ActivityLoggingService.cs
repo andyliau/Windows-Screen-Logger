@@ -111,15 +111,12 @@ namespace WindowsScreenLogger.Services
         private void MaybeFlush(DateTime now)
         {
             // If the date has rolled over since this buffer was started, flush
-            // immediately so lines timestamped "23:59:xx" go to yesterday's file,
-            // not today's. Then reset last-window state so the new day's file
-            // always starts with a full window record, never an orphaned dot.
+            // immediately so lines timestamped "23:59:xx" go to yesterday's file.
+            // FlushBuffer handles seeding the new day's file with the active window.
             var todayPath = GetLogFilePath();
             if (_bufferTargetPath != null && _bufferTargetPath != todayPath)
             {
                 FlushBuffer();
-                _lastProc  = null;
-                _lastTitle = null;
                 return;
             }
 
@@ -143,6 +140,7 @@ namespace WindowsScreenLogger.Services
             if (_buffer.Count == 0) return;
 
             var path = _bufferTargetPath ?? GetLogFilePath();
+            var isRollover = path != GetLogFilePath();
             try
             {
                 Directory.CreateDirectory(_config.GetEffectiveSavePath());
@@ -159,6 +157,11 @@ namespace WindowsScreenLogger.Services
                 _bufferTargetPath = null;
                 _lastFlush = DateTime.Now;
             }
+
+            // After a day-rollover flush, seed the new day's buffer with the
+            // current window so the new file never starts with orphaned dots.
+            if (isRollover && _lastProc != null)
+                Buffer($"{DateTime.Now:HH:mm:ss} {_lastProc} \"{_lastTitle}\"");
         }
 
         private static (string name, bool elevated) ResolveProcessName(int pid)
