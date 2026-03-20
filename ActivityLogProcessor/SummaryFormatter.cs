@@ -1,0 +1,69 @@
+using System.Text;
+using System.Text.Json;
+
+namespace ActivityLogProcessor;
+
+public static class SummaryFormatter
+{
+    public static string FormatText(ActivitySummary summary, string? dateLabel = null)
+    {
+        var sb = new StringBuilder();
+        var label = dateLabel ?? "Activity Summary";
+
+        sb.AppendLine($"Activity Summary — {label}");
+        sb.AppendLine(new string('=', 30));
+        sb.AppendLine();
+
+        sb.AppendLine("By application (total time):");
+        foreach (var app in summary.ByApplication)
+        {
+            var duration = FormatDuration(app.TotalDuration);
+            var friendly = app.FriendlyName is not null ? $"  ({app.FriendlyName})" : string.Empty;
+            sb.AppendLine($"  {app.Process,-14}{duration}{friendly}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Top windows (longest focus):");
+        foreach (var w in summary.TopWindows)
+        {
+            var mins = FormatMinutes(w.TotalDuration);
+            sb.AppendLine($"  {w.Process,-8}{$"\"{w.Title}\"",-44}{mins}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine($"Total tracked: {FormatDuration(summary.TotalTracked)}");
+
+        return sb.ToString();
+    }
+
+    public static string FormatJson(ActivitySummary summary, string? dateLabel = null)
+    {
+        var obj = new
+        {
+            date = dateLabel,
+            totalTrackedSeconds = (long)summary.TotalTracked.TotalSeconds,
+            byApplication = summary.ByApplication.Select(a => new
+            {
+                process = a.Process,
+                friendlyName = a.FriendlyName,
+                totalSeconds = (long)a.TotalDuration.TotalSeconds,
+            }),
+            topWindows = summary.TopWindows.Select(w => new
+            {
+                process = w.Process,
+                title = w.Title,
+                totalSeconds = (long)w.TotalDuration.TotalSeconds,
+            }),
+        };
+
+        return JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private static string FormatDuration(TimeSpan t)
+        => $"{(int)t.TotalHours}h {t.Minutes:D2}m";
+
+    private static string FormatMinutes(TimeSpan t)
+        => t.TotalHours >= 1
+            ? $"{(int)t.TotalHours}h {t.Minutes:D2}m"
+            : $"{(int)t.TotalMinutes}m";
+}
