@@ -3,21 +3,25 @@ using ActivityLogProcessor;
 
 var pathOption = new Option<FileInfo?>("--path") { Description = "Path to the .log file to process." };
 var intervalOption = new Option<int>("--interval") { Description = "Sample interval in seconds." };
-var outputOption = new Option<string>("--output") { Description = "Output format: summary or json." };
+var outputOption = new Option<string>("--output") { Description = "Output format: summary, json, or timeline (default: summary)." };
+var minDurationOption = new Option<int>("--min-duration") { Description = "Minimum window duration in seconds to show in timeline output (default: 60)." };
 
 intervalOption.DefaultValueFactory = _ => 5;
 outputOption.DefaultValueFactory = _ => "summary";
+minDurationOption.DefaultValueFactory = _ => 60;
 
 var rootCommand = new RootCommand("Processes WindowsScreenLogger activity log files.");
 rootCommand.Options.Add(pathOption);
 rootCommand.Options.Add(intervalOption);
 rootCommand.Options.Add(outputOption);
+rootCommand.Options.Add(minDurationOption);
 
 rootCommand.SetAction((ParseResult ctx) =>
 {
     var path = ctx.GetValue(pathOption);
     var interval = ctx.GetValue(intervalOption);
     var output = ctx.GetValue(outputOption) ?? "summary";
+    var minDuration = ctx.GetValue(minDurationOption);
 
     if (path is null)
     {
@@ -33,14 +37,15 @@ rootCommand.SetAction((ParseResult ctx) =>
 
     var lines = File.ReadAllLines(path.FullName);
     var entries = LogParser.Parse(lines);
-    var summary = ActivitySummariser.Summarise(entries, interval);
+    var summary = ActivitySummariser.Summarise(entries, interval, minDuration);
 
     var dateLabel = Path.GetFileNameWithoutExtension(path.Name);
 
     var result = output.ToLowerInvariant() switch
     {
-        "json" => SummaryFormatter.FormatJson(summary, dateLabel),
-        _ => SummaryFormatter.FormatText(summary, dateLabel),
+        "json"     => SummaryFormatter.FormatJson(summary, dateLabel),
+        "timeline" => SummaryFormatter.FormatTimeline(summary, dateLabel),
+        _          => SummaryFormatter.FormatText(summary, dateLabel),
     };
 
     Console.WriteLine(result);

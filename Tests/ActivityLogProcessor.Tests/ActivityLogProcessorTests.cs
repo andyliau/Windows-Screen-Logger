@@ -244,6 +244,54 @@ public class ActivitySummariserTests
 
         Assert.Equal(10, summary.TopWindows.Count);
     }
+
+    [Fact]
+    public void Summarise_Timeline_FiltersEntriesBelowMinDuration()
+    {
+        var entries = new[]
+        {
+            MakeEntry("code",   "FileA", 11), // 12 × 5s = 60s — at threshold, included
+            MakeEntry("chrome", "Quick",  0), //  1 × 5s =  5s — below threshold, excluded
+            MakeEntry("code",   "FileB", 23), // 24 × 5s = 120s — included
+        };
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5, minTimelineSeconds: 60);
+
+        Assert.Equal(2, summary.Timeline.Count);
+        Assert.DoesNotContain(summary.Timeline, t => t.Title == "Quick");
+    }
+
+    [Fact]
+    public void Summarise_Timeline_TotalsIncludeFilteredEntries()
+    {
+        // Short entries are hidden from the timeline but still count toward totals.
+        var entries = new[]
+        {
+            MakeEntry("code",   "FileA",  0), //  5s — filtered from timeline
+            MakeEntry("chrome", "GitHub", 11), // 60s — shown in timeline
+        };
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5, minTimelineSeconds: 60);
+
+        Assert.Single(summary.Timeline);
+        Assert.Equal(2, summary.ByApplication.Count); // code still counted
+        Assert.Equal(TimeSpan.FromSeconds(65), summary.TotalTracked);
+    }
+
+    [Fact]
+    public void Summarise_Timeline_PreservesChronologicalOrder()
+    {
+        var entries = new[]
+        {
+            new ActivityEntry(new WindowRecord(new TimeSpan(9,  0, 0), "code",   "FileA"),   5),
+            new ActivityEntry(new WindowRecord(new TimeSpan(9, 30, 0), "chrome", "GitHub"),  3),
+            new ActivityEntry(new WindowRecord(new TimeSpan(9, 40, 0), "teams",  "Standup"), 7),
+        };
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60, minTimelineSeconds: 0);
+
+        Assert.Equal(3, summary.Timeline.Count);
+        Assert.Equal(new TimeSpan(9,  0, 0), summary.Timeline[0].Timestamp);
+        Assert.Equal(new TimeSpan(9, 30, 0), summary.Timeline[1].Timestamp);
+        Assert.Equal(new TimeSpan(9, 40, 0), summary.Timeline[2].Timestamp);
+    }
 }
 
 /// <summary>
@@ -276,6 +324,39 @@ public class SampleOutputTests
         @"10:16:00 slack ""Slack — #dev channel""",
         .. Enumerable.Repeat(".", 2),
     ];
+
+    [Fact]
+    public void FullPipeline_TimelineOutput_ShowsChronologicalFlowAndRollup()
+    {
+        var entries = LogParser.Parse(SampleLog);
+        // minTimelineSeconds: 0 so all entries appear (all are well above 60s anyway)
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60, minTimelineSeconds: 0);
+        var text = SummaryFormatter.FormatTimeline(summary, "2024-03-20");
+
+        // Header
+        Assert.Contains("2024-03-20", text);
+        Assert.Contains("1h 19m tracked", text);
+
+        // All six timeline entries present
+        Assert.Contains(@"""auth.ts — VS Code""", text);
+        Assert.Contains(@"""GitHub — Pull Requests""", text);
+        Assert.Contains(@"""Weekly Sync — Microsoft Teams""", text);
+        Assert.Contains(@"""Program.cs — VS Code""", text);
+        Assert.Contains(@"""Stack Overflow — async await C#""", text);
+        Assert.Contains(@"""Slack — #dev channel""", text);
+
+        // Entries appear in chronological order
+        Assert.True(text.IndexOf("auth.ts",    StringComparison.Ordinal) <
+                    text.IndexOf("Weekly Sync", StringComparison.Ordinal));
+        Assert.True(text.IndexOf("Weekly Sync", StringComparison.Ordinal) <
+                    text.IndexOf("Program.cs",  StringComparison.Ordinal));
+
+        // Compact rollup at bottom
+        Assert.Contains("code 50m",   text);
+        Assert.Contains("chrome 15m", text);
+        Assert.Contains("teams 11m",  text);
+        Assert.Contains("slack 3m",   text);
+    }
 
     [Fact]
     public void FullPipeline_TextOutput_ShowsExpectedSummary()

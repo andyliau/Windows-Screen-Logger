@@ -5,6 +5,29 @@ namespace ActivityLogProcessor;
 
 public static class SummaryFormatter
 {
+    public static string FormatTimeline(ActivitySummary summary, string? dateLabel = null)
+    {
+        var sb = new StringBuilder();
+        var label = dateLabel ?? "Activity";
+
+        sb.AppendLine($"{label}  {FormatDuration(summary.TotalTracked)} tracked");
+        sb.AppendLine();
+
+        foreach (var entry in summary.Timeline)
+        {
+            var time = $"{(int)entry.Timestamp.TotalHours:D2}:{entry.Timestamp.Minutes:D2}";
+            var dur = FormatMinutes(entry.Duration);
+            sb.AppendLine($"{time}  {entry.Process,-14}  \"{entry.Title}\"  {dur}");
+        }
+
+        sb.AppendLine();
+        var rollup = string.Join(" · ", summary.ByApplication
+            .Select(a => $"{a.Process} {FormatMinutes(a.TotalDuration)}"));
+        sb.Append(rollup);
+
+        return sb.ToString();
+    }
+
     public static string FormatText(ActivitySummary summary, string? dateLabel = null)
     {
         var sb = new StringBuilder();

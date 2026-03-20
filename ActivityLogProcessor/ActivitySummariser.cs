@@ -10,9 +10,16 @@ public sealed record WindowSummary(
     string Title,
     TimeSpan TotalDuration);
 
+public sealed record TimelineEntry(
+    TimeSpan Timestamp,
+    string Process,
+    string Title,
+    TimeSpan Duration);
+
 public sealed record ActivitySummary(
     IReadOnlyList<AppSummary> ByApplication,
     IReadOnlyList<WindowSummary> TopWindows,
+    IReadOnlyList<TimelineEntry> Timeline,
     TimeSpan TotalTracked);
 
 public static class ActivitySummariser
@@ -30,7 +37,10 @@ public static class ActivitySummariser
         ["explorer"]= "Windows Explorer",
     };
 
-    public static ActivitySummary Summarise(IReadOnlyList<ActivityEntry> entries, int sampleIntervalSeconds = 5)
+    public static ActivitySummary Summarise(
+        IReadOnlyList<ActivityEntry> entries,
+        int sampleIntervalSeconds = 5,
+        int minTimelineSeconds = 60)
     {
         var byApp = new Dictionary<string, TimeSpan>(StringComparer.OrdinalIgnoreCase);
         var byWindow = new Dictionary<(string Process, string Title), TimeSpan>();
@@ -61,8 +71,17 @@ public static class ActivitySummariser
             .Select(kv => new WindowSummary(kv.Key.Process, kv.Key.Title, kv.Value))
             .ToList();
 
+        var timeline = entries
+            .Select(e => new TimelineEntry(
+                e.Window.Timestamp,
+                e.Window.Process,
+                e.Window.Title,
+                TimeSpan.FromSeconds((e.DotCount + 1) * sampleIntervalSeconds)))
+            .Where(t => t.Duration.TotalSeconds >= minTimelineSeconds)
+            .ToList();
+
         var total = byApp.Values.Aggregate(TimeSpan.Zero, (acc, d) => acc + d);
 
-        return new ActivitySummary(appSummaries, windowSummaries, total);
+        return new ActivitySummary(appSummaries, windowSummaries, timeline, total);
     }
 }
