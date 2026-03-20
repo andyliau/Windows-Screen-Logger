@@ -10,13 +10,13 @@ namespace WindowsScreenLogger.Services
     ///
     /// Text format — one line per record, no schema:
     ///   HH:mm:ss proc "title"            — window changed or first record
-    ///   .                                — same window heartbeat (no timestamp needed)
+    ///   .                                — same window still active (one dot per sample tick)
     ///
     /// Timing defaults:
     ///   • Sample interval : 5 s  (configurable via ActivitySampleIntervalSeconds)
     ///   • Buffer flush    : 60 s or when buffer reaches 12 lines, whichever comes first
     ///   • Window-change write gate : 5 s  minimum between full records
-    ///   • Heartbeat (dot) gate     : 60 s minimum between dots
+    ///   • Each dot = one sample interval of focus time (e.g. 5 s)
     ///
     /// Performance contract:
     ///   • Runs on the WinForms UI thread — no locks needed
@@ -26,7 +26,6 @@ namespace WindowsScreenLogger.Services
     public class ActivityLoggingService : IDisposable
     {
         private const int MinChangeWriteSeconds = 5;
-        private const int SameHeartbeatSeconds  = 60;
         private const int FlushIntervalSeconds  = 60;
         private const int FlushLineCount        = 12;
         private const int MaxTitleLength        = 80;
@@ -39,9 +38,8 @@ namespace WindowsScreenLogger.Services
         private string? _lastProc;
         private string? _lastTitle;
         private DateTime _lastChangeWrite = DateTime.MinValue;
-        private DateTime _lastSameWrite   = DateTime.MinValue;
         private DateTime _lastFlush       = DateTime.Now;
-        private string?  _bufferTargetPath; // file path captured when first line enters buffer
+        private string?  _bufferTargetPath;
 
         public ActivityLoggingService(AppConfiguration config, ILogger logger)
         {
@@ -83,13 +81,11 @@ namespace WindowsScreenLogger.Services
                         _lastProc = procName;
                         _lastTitle = title;
                         _lastChangeWrite = now;
-                        _lastSameWrite = now;
                     }
                 }
-                else if ((now - _lastSameWrite).TotalSeconds >= SameHeartbeatSeconds)
+                else
                 {
                     Buffer(".");
-                    _lastSameWrite = now;
                 }
 
                 MaybeFlush(now);

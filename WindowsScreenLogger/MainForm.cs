@@ -94,6 +94,7 @@ public partial class MainForm : Form
 		notifyIcon.ContextMenuStrip = new ContextMenuStrip();
 		notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
 		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
+		notifyIcon.ContextMenuStrip.Items.Add("Open Activity Log", null, OpenActivityLog);
 		notifyIcon.ContextMenuStrip.Items.Add("Clean Old Screenshots", null, OnCleanClick);
 		
 		// Add uninstall option if application is installed
@@ -155,7 +156,7 @@ public partial class MainForm : Form
 			activityTimer.Tick -= ActivityTimer_Tick;
 		}
 
-		var sampleInterval = Math.Max(1, Math.Min(30, config.ActivitySampleIntervalSeconds));
+		var sampleInterval = Math.Max(5, Math.Min(60, config.ActivitySampleIntervalSeconds));
 		activityTimer = new Timer { Interval = sampleInterval * 1000 };
 		activityTimer.Tick += ActivityTimer_Tick;
 
@@ -163,12 +164,17 @@ public partial class MainForm : Form
 		{
 			activityTimer.Start();
 			_logger.LogInformation($"Activity logging enabled — sampling every {sampleInterval}s. Log: {activityLoggingService.GetLogFilePath()}");
+			ShowActivityLoggingIntroIfNeeded();
 		}
 		else
 		{
-			_logger.LogInformation("Activity logging is disabled. Set enableActivityLogging=true in config.json to track your daily work activity.");
-			ShowActivityLoggingIntroIfNeeded();
+			_logger.LogInformation("Activity logging is disabled. Enable it in Settings → Activity Logging.");
 		}
+
+		// Reflect activity logging state in the tray tooltip
+		notifyIcon.Text = config.EnableActivityLogging
+			? "Screen Logger (activity logging on)"
+			: "Screen Logger";
 	}
 
 	private void ShowActivityLoggingIntroIfNeeded()
@@ -176,13 +182,12 @@ public partial class MainForm : Form
 		if (config.ActivityLoggingIntroShown) return;
 		config.ActivityLoggingIntroShown = true;
 		config.Save();
-		// Delay slightly so the tray icon is visible before the balloon appears
 		Task.Delay(3000).ContinueWith(_ =>
 			notifyIcon.ShowBalloonTip(
 				8000,
-				"Activity Logging Available",
-				"Windows Screen Logger can track which apps you use and for how long.\n" +
-				"Enable it in Settings → Activity Logging, or set enableActivityLogging=true in config.json.",
+				"Activity Logging Active",
+				"Windows Screen Logger is tracking your active windows to help summarise your daily work.\n" +
+				"Logs are saved alongside your screenshots. Disable anytime in Settings → Activity Logging.",
 				ToolTipIcon.Info),
 			TaskScheduler.FromCurrentSynchronizationContext());
 	}
@@ -222,6 +227,27 @@ public partial class MainForm : Form
 		if (settingsForm.ShowDialog() == DialogResult.OK)
 		{
 			Configure();
+		}
+	}
+
+	private void OpenActivityLog(object sender, EventArgs e)
+	{
+		var logPath = activityLoggingService.GetLogFilePath();
+		if (File.Exists(logPath))
+		{
+			Process.Start(new ProcessStartInfo("notepad.exe", logPath) { UseShellExecute = true });
+		}
+		else if (!config.EnableActivityLogging)
+		{
+			MessageBox.Show(
+				"Activity logging is currently disabled.\nEnable it in Settings → Activity Logging.",
+				"Activity Log", MessageBoxButtons.OK, MessageBoxIcon.Information);
+		}
+		else
+		{
+			// Logging is on but no entries recorded yet today
+			var folder = Path.GetDirectoryName(logPath)!;
+			Process.Start("explorer.exe", folder);
 		}
 	}
 
