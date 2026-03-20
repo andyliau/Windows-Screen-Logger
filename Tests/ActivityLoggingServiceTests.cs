@@ -59,18 +59,6 @@ namespace WindowsScreenLogger.Tests
         }
 
         [Fact]
-        public void HeartbeatDot_HasNoTimestamp()
-        {
-            // Force a dot into the buffer then flush
-            InjectDot();
-            _sut.FlushBuffer();
-
-            var lines = ReadLines();
-            Assert.Single(lines);
-            Assert.Equal(".", lines[0]);
-        }
-
-        [Fact]
         public void ElevatedProcess_WritesUnknownElevated()
         {
             InjectElevated();
@@ -224,7 +212,6 @@ namespace WindowsScreenLogger.Tests
         private static readonly System.Reflection.FieldInfo LastProcField        = typeof(ActivityLoggingService).GetField("_lastProc",          System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         private static readonly System.Reflection.FieldInfo LastTitleField       = typeof(ActivityLoggingService).GetField("_lastTitle",         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         private static readonly System.Reflection.FieldInfo LastChangeField      = typeof(ActivityLoggingService).GetField("_lastChangeWrite",   System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        private static readonly System.Reflection.FieldInfo LastSameField        = typeof(ActivityLoggingService).GetField("_lastSameWrite",     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         private static readonly System.Reflection.FieldInfo BufferField          = typeof(ActivityLoggingService).GetField("_buffer",            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         private static readonly System.Reflection.FieldInfo BufferTargetPathField= typeof(ActivityLoggingService).GetField("_bufferTargetPath",  System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
 
@@ -245,7 +232,6 @@ namespace WindowsScreenLogger.Tests
             LastProcField.SetValue(_sut, proc);
             LastTitleField.SetValue(_sut, title);
             LastChangeField.SetValue(_sut, now);
-            LastSameField.SetValue(_sut, now);
 
             if (buffer.Count >= 12)
                 _sut.FlushBuffer();
@@ -259,13 +245,6 @@ namespace WindowsScreenLogger.Tests
             LastProcField.SetValue(_sut, "unknown-elevated");
             LastTitleField.SetValue(_sut, "[elevated]");
             LastChangeField.SetValue(_sut, now);
-            LastSameField.SetValue(_sut, now);
-        }
-
-        private void InjectDot()
-        {
-            ((List<string>)BufferField.GetValue(_sut)!).Add(".");
-            LastSameField.SetValue(_sut, DateTime.Now);
         }
 
         private List<string> ReadLines()
