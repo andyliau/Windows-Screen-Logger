@@ -13,10 +13,8 @@ namespace WindowsScreenLogger.Services
     ///   .                                — same window still active (one dot per sample tick)
     ///
     /// Timing defaults:
-    ///   • Sample interval : 5 s  (configurable via ActivitySampleIntervalSeconds)
+    ///   • Sample interval : 5 s  (configurable via ActivitySampleIntervalSeconds, min 2 s)
     ///   • Buffer flush    : 60 s or when buffer reaches 12 lines, whichever comes first
-    ///   • Window-change write gate : 5 s  minimum between full records
-    ///   • Each dot = one sample interval of focus time (e.g. 5 s)
     ///
     /// Performance contract:
     ///   • Runs on the WinForms UI thread — no locks needed
@@ -25,7 +23,6 @@ namespace WindowsScreenLogger.Services
     /// </summary>
     public class ActivityLoggingService : IDisposable
     {
-        private const int MinChangeWriteSeconds = 5;
         private const int FlushIntervalSeconds  = 60;
         private const int FlushLineCount        = 12;
         private const int MaxTitleLength        = 80;
@@ -37,7 +34,6 @@ namespace WindowsScreenLogger.Services
 
         private string? _lastProc;
         private string? _lastTitle;
-        private DateTime _lastChangeWrite = DateTime.MinValue;
         private DateTime _lastFlush       = DateTime.Now;
         private string?  _bufferTargetPath;
 
@@ -75,13 +71,9 @@ namespace WindowsScreenLogger.Services
 
                 if (windowChanged)
                 {
-                    if ((now - _lastChangeWrite).TotalSeconds >= MinChangeWriteSeconds)
-                    {
-                        Buffer($"{now:HH:mm:ss} {procName} \"{title}\"");
-                        _lastProc = procName;
-                        _lastTitle = title;
-                        _lastChangeWrite = now;
-                    }
+                    Buffer($"{now:HH:mm:ss} {procName} \"{title}\"");
+                    _lastProc = procName;
+                    _lastTitle = title;
                 }
                 else
                 {

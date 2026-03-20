@@ -163,27 +163,6 @@ namespace WindowsScreenLogger.Tests
             Assert.Matches(@"^\d{2}:\d{2}:\d{2} code ""Working late""$", buffer[0]);
         }
 
-        // ── Rate limiting ────────────────────────────────────────────────────
-
-        [Fact]
-        public void RateLimit_PreventsWritesWithin5Seconds()
-        {
-            // Simulate the real rate-limit: last change was 1 s ago → new change should be skipped
-            LastChangeField.SetValue(_sut, DateTime.Now.AddSeconds(-1));
-            LastProcField.SetValue(_sut,  "code");
-            LastTitleField.SetValue(_sut, "A");
-
-            // Attempt a window change via Sample() — rate limit blocks it
-            // (Sample() uses real P/Invoke so we just verify the _lastChangeWrite is still 1s old)
-            var before = (DateTime)LastChangeField.GetValue(_sut)!;
-            // Inject directly but simulate what Sample would do with the gate check
-            var now = DateTime.Now;
-            if ((now - before).TotalSeconds >= 5)
-                ((List<string>)BufferField.GetValue(_sut)!).Add("should not appear");
-
-            Assert.Empty((List<string>)BufferField.GetValue(_sut)!);
-        }
-
         // ── Privacy filter ────────────────────────────────────────────────────
 
         [Fact]
@@ -246,7 +225,6 @@ namespace WindowsScreenLogger.Tests
 
         private static readonly System.Reflection.FieldInfo LastProcField        = typeof(ActivityLoggingService).GetField("_lastProc",          System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         private static readonly System.Reflection.FieldInfo LastTitleField       = typeof(ActivityLoggingService).GetField("_lastTitle",         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        private static readonly System.Reflection.FieldInfo LastChangeField      = typeof(ActivityLoggingService).GetField("_lastChangeWrite",   System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         private static readonly System.Reflection.FieldInfo BufferField          = typeof(ActivityLoggingService).GetField("_buffer",            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         private static readonly System.Reflection.FieldInfo BufferTargetPathField= typeof(ActivityLoggingService).GetField("_bufferTargetPath",  System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
 
@@ -266,7 +244,6 @@ namespace WindowsScreenLogger.Tests
 
             LastProcField.SetValue(_sut, proc);
             LastTitleField.SetValue(_sut, title);
-            LastChangeField.SetValue(_sut, now);
 
             if (buffer.Count >= 12)
                 _sut.FlushBuffer();
@@ -279,7 +256,6 @@ namespace WindowsScreenLogger.Tests
             ((List<string>)BufferField.GetValue(_sut)!).Add(line);
             LastProcField.SetValue(_sut, "unknown-elevated");
             LastTitleField.SetValue(_sut, "[elevated]");
-            LastChangeField.SetValue(_sut, now);
         }
 
         private void InjectDot()
