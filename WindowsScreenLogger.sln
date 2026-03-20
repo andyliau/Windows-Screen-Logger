@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.11.35431.28
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11415.280 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsScreenLogger", "WindowsScreenLogger\WindowsScreenLogger.csproj", "{1B42DD61-9518-4A14-98A7-29220276ECDC}"
 EndProject
@@ -76,6 +76,7 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{D1B2A1B2-1234-4C84-943B-7DE0EF85C799} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{1FF54118-20D9-478F-BFFE-C680E4256CED} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution

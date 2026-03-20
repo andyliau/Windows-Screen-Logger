@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ActivityLogProcessor;
 using Xunit;
 
@@ -242,5 +243,99 @@ public class ActivitySummariserTests
         var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5);
 
         Assert.Equal(10, summary.TopWindows.Count);
+    }
+}
+
+/// <summary>
+/// End-to-end acceptance tests with a realistic morning session log.
+/// Read the expected values to understand exactly what the processor outputs.
+///
+/// Sample session (60-second sample interval):
+///   09:00  code   "auth.ts — VS Code"                  30 min  (29 dots)
+///   09:30  chrome "GitHub — Pull Requests"              10 min  ( 9 dots)
+///   09:40  teams  "Weekly Sync — Microsoft Teams"       11 min  (10 dots)
+///   09:51  code   "Program.cs — VS Code"                20 min  (19 dots)
+///   10:11  chrome "Stack Overflow — async await C#"      5 min  ( 4 dots)
+///   10:16  slack  "Slack — #dev channel"                 3 min  ( 2 dots)
+///                                                 Total: 79 min
+/// </summary>
+public class SampleOutputTests
+{
+    private static readonly string[] SampleLog =
+    [
+        @"09:00:00 code ""auth.ts — VS Code""",
+        .. Enumerable.Repeat(".", 29),
+        @"09:30:00 chrome ""GitHub — Pull Requests""",
+        .. Enumerable.Repeat(".", 9),
+        @"09:40:00 teams ""Weekly Sync — Microsoft Teams""",
+        .. Enumerable.Repeat(".", 10),
+        @"09:51:00 code ""Program.cs — VS Code""",
+        .. Enumerable.Repeat(".", 19),
+        @"10:11:00 chrome ""Stack Overflow — async await C#""",
+        .. Enumerable.Repeat(".", 4),
+        @"10:16:00 slack ""Slack — #dev channel""",
+        .. Enumerable.Repeat(".", 2),
+    ];
+
+    [Fact]
+    public void FullPipeline_TextOutput_ShowsExpectedSummary()
+    {
+        var entries = LogParser.Parse(SampleLog);
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60);
+        var text = SummaryFormatter.FormatText(summary, "2024-03-20");
+
+        Assert.Contains("Activity Summary — 2024-03-20", text);
+
+        // By application — process padded to 14 chars, duration as Xh YYm, friendly name in parens
+        Assert.Contains("code          0h 50m  (Visual Studio Code)", text);   // 30m + 20m
+        Assert.Contains("chrome        0h 15m  (Google Chrome)", text);        // 10m + 5m
+        Assert.Contains("teams         0h 11m  (Microsoft Teams)", text);
+        Assert.Contains("slack         0h 03m  (Slack)", text);
+
+        // Top windows — sorted by longest focus, durations < 1h shown as minutes
+        Assert.Contains(@"code    ""auth.ts — VS Code""", text);       // 30m
+        Assert.Contains(@"code    ""Program.cs — VS Code""", text);    // 20m
+        Assert.Contains(@"teams   ""Weekly Sync — Microsoft Teams""", text); // 11m
+
+        Assert.Contains("Total tracked: 1h 19m", text);
+    }
+
+    [Fact]
+    public void FullPipeline_JsonOutput_HasExpectedStructure()
+    {
+        var entries = LogParser.Parse(SampleLog);
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60);
+        var json = SummaryFormatter.FormatJson(summary, "2024-03-20");
+
+        var root = JsonDocument.Parse(json).RootElement; // also validates well-formed JSON
+
+        Assert.Equal("2024-03-20", root.GetProperty("date").GetString());
+        Assert.Equal(4740L, root.GetProperty("totalTrackedSeconds").GetInt64()); // 79 min
+
+        var byApp = root.GetProperty("byApplication").EnumerateArray().ToArray();
+        Assert.Equal(4, byApp.Length);
+
+        // Ranked by total time descending
+        Assert.Equal("code",               byApp[0].GetProperty("process").GetString());
+        Assert.Equal(3000L,                byApp[0].GetProperty("totalSeconds").GetInt64()); // 50 min
+        Assert.Equal("Visual Studio Code", byApp[0].GetProperty("friendlyName").GetString());
+
+        Assert.Equal("chrome",        byApp[1].GetProperty("process").GetString());
+        Assert.Equal(900L,            byApp[1].GetProperty("totalSeconds").GetInt64()); // 15 min
+        Assert.Equal("Google Chrome", byApp[1].GetProperty("friendlyName").GetString());
+
+        Assert.Equal("teams",           byApp[2].GetProperty("process").GetString());
+        Assert.Equal(660L,              byApp[2].GetProperty("totalSeconds").GetInt64()); // 11 min
+        Assert.Equal("Microsoft Teams", byApp[2].GetProperty("friendlyName").GetString());
+
+        Assert.Equal("slack", byApp[3].GetProperty("process").GetString());
+        Assert.Equal(180L,    byApp[3].GetProperty("totalSeconds").GetInt64()); // 3 min
+        Assert.Equal("Slack", byApp[3].GetProperty("friendlyName").GetString());
+
+        var topWindows = root.GetProperty("topWindows").EnumerateArray().ToArray();
+        Assert.Equal(6, topWindows.Length);
+
+        Assert.Equal("auth.ts — VS Code", topWindows[0].GetProperty("title").GetString());
+        Assert.Equal(1800L,               topWindows[0].GetProperty("totalSeconds").GetInt64()); // 30 min
     }
 }
