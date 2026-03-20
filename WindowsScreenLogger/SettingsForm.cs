@@ -28,6 +28,9 @@ public partial class SettingsForm : Form
 		this.checkBoxEnableActivityLogging = new CheckBox();
 		this.labelActivityInterval = new Label();
 		this.numericUpDownActivityInterval = new NumericUpDown();
+		this.labelSummaryOutputDir = new Label();
+		this.textBoxSummaryOutputDir = new TextBox();
+		this.buttonBrowseSummaryDir = new Button();
 		this.buttonSave = new Button();
 		this.buttonCancel = new Button();
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownInterval)).BeginInit();
@@ -175,25 +178,54 @@ public partial class SettingsForm : Form
 		this.numericUpDownActivityInterval.Size = new Size(120, 29);
 		this.numericUpDownActivityInterval.TabIndex = 12;
 		this.numericUpDownActivityInterval.Value = 5;
-		// 
+		//
+		// labelSummaryOutputDir
+		//
+		this.labelSummaryOutputDir.AutoSize = true;
+		this.labelSummaryOutputDir.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.labelSummaryOutputDir.Location = new Point(20, 338);
+		this.labelSummaryOutputDir.Name = "labelSummaryOutputDir";
+		this.labelSummaryOutputDir.TabIndex = 13;
+		this.labelSummaryOutputDir.Text = "Summary output folder:";
+		//
+		// textBoxSummaryOutputDir
+		//
+		this.textBoxSummaryOutputDir.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.textBoxSummaryOutputDir.Location = new Point(20, 364);
+		this.textBoxSummaryOutputDir.Name = "textBoxSummaryOutputDir";
+		this.textBoxSummaryOutputDir.PlaceholderText = "Not configured — output goes to stdout";
+		this.textBoxSummaryOutputDir.Size = new Size(305, 29);
+		this.textBoxSummaryOutputDir.TabIndex = 14;
+		//
+		// buttonBrowseSummaryDir
+		//
+		this.buttonBrowseSummaryDir.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.buttonBrowseSummaryDir.Location = new Point(330, 364);
+		this.buttonBrowseSummaryDir.Name = "buttonBrowseSummaryDir";
+		this.buttonBrowseSummaryDir.Size = new Size(50, 29);
+		this.buttonBrowseSummaryDir.TabIndex = 15;
+		this.buttonBrowseSummaryDir.Text = "...";
+		this.buttonBrowseSummaryDir.UseVisualStyleBackColor = true;
+		this.buttonBrowseSummaryDir.Click += new EventHandler(this.ButtonBrowseSummaryDir_Click);
+		//
 		// buttonSave
-		// 
+		//
 		this.buttonSave.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-		this.buttonSave.Location = new Point(100, 345);
+		this.buttonSave.Location = new Point(100, 410);
 		this.buttonSave.Name = "buttonSave";
 		this.buttonSave.Size = new Size(100, 30);
-		this.buttonSave.TabIndex = 13;
+		this.buttonSave.TabIndex = 16;
 		this.buttonSave.Text = "Save";
 		this.buttonSave.UseVisualStyleBackColor = true;
 		this.buttonSave.Click += new EventHandler(this.ButtonSave_Click);
-		// 
+		//
 		// buttonCancel
-		// 
+		//
 		this.buttonCancel.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-		this.buttonCancel.Location = new Point(220, 345);
+		this.buttonCancel.Location = new Point(220, 410);
 		this.buttonCancel.Name = "buttonCancel";
 		this.buttonCancel.Size = new Size(100, 30);
-		this.buttonCancel.TabIndex = 14;
+		this.buttonCancel.TabIndex = 17;
 		this.buttonCancel.Text = "Cancel";
 		this.buttonCancel.UseVisualStyleBackColor = true;
 		this.buttonCancel.Click += new EventHandler(this.ButtonCancel_Click);
@@ -202,11 +234,14 @@ public partial class SettingsForm : Form
 		// 
 		this.AutoScaleDimensions = new SizeF(7F, 15F);
 		this.AutoScaleMode = AutoScaleMode.Font;
-		this.ClientSize = new Size(400, 400);
+		this.ClientSize = new Size(400, 460);
 		this.Controls.Add(this.numericUpDownActivityInterval);
 		this.Controls.Add(this.labelActivityInterval);
 		this.Controls.Add(this.checkBoxEnableActivityLogging);
 		this.Controls.Add(this.labelActivitySection);
+		this.Controls.Add(this.buttonBrowseSummaryDir);
+		this.Controls.Add(this.textBoxSummaryOutputDir);
+		this.Controls.Add(this.labelSummaryOutputDir);
 		this.Controls.Add(this.numericUpDownClearDays);
 		this.Controls.Add(this.labelClearDays);
 		this.Controls.Add(this.buttonCancel);
@@ -247,6 +282,9 @@ public partial class SettingsForm : Form
 	private CheckBox checkBoxEnableActivityLogging;
 	private Label labelActivityInterval;
 	private NumericUpDown numericUpDownActivityInterval;
+	private Label labelSummaryOutputDir;
+	private TextBox textBoxSummaryOutputDir;
+	private Button buttonBrowseSummaryDir;
 	private Button buttonSave;
 	private Button buttonCancel;
 
@@ -260,6 +298,7 @@ public partial class SettingsForm : Form
 		checkBoxEnableActivityLogging.Checked = _config.EnableActivityLogging;
 		numericUpDownActivityInterval.Value = _config.ActivitySampleIntervalSeconds;
 		numericUpDownActivityInterval.Enabled = _config.EnableActivityLogging;
+		textBoxSummaryOutputDir.Text = _config.ActivitySummaryOutputDir ?? string.Empty;
 		checkBoxEnableActivityLogging.CheckedChanged += (s, _) =>
 			numericUpDownActivityInterval.Enabled = checkBoxEnableActivityLogging.Checked;
 	}
@@ -273,6 +312,9 @@ public partial class SettingsForm : Form
 		_config.StartWithWindows = checkBoxStartWithWindows.Checked;
 		_config.EnableActivityLogging = checkBoxEnableActivityLogging.Checked;
 		_config.ActivitySampleIntervalSeconds = (int)numericUpDownActivityInterval.Value;
+		_config.ActivitySummaryOutputDir = string.IsNullOrWhiteSpace(textBoxSummaryOutputDir.Text)
+			? null
+			: textBoxSummaryOutputDir.Text.Trim();
 		_config.Save();
 
 		// Set or remove startup entry
@@ -297,5 +339,17 @@ public partial class SettingsForm : Form
 	private bool GetStartup()
 	{
 		return StartupRegistry.IsStartupEnabled();
+	}
+
+	private void ButtonBrowseSummaryDir_Click(object sender, EventArgs e)
+	{
+		using var dialog = new FolderBrowserDialog
+		{
+			Description = "Select folder for activity summary files",
+			UseDescriptionForTitle = true,
+			SelectedPath = textBoxSummaryOutputDir.Text.Trim(),
+		};
+		if (dialog.ShowDialog(this) == DialogResult.OK)
+			textBoxSummaryOutputDir.Text = dialog.SelectedPath;
 	}
 }
