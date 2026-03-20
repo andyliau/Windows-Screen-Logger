@@ -1,9 +1,9 @@
 using System.CommandLine;
 using ActivityLogProcessor;
 
-var pathOption = new Option<FileInfo?>("--path", "Path to the .log file to process.");
-var intervalOption = new Option<int>("--interval", "Sample interval in seconds.");
-var outputOption = new Option<string>("--output", "Output format: summary or json.");
+var pathOption = new Option<FileInfo?>("--path") { Description = "Path to the .log file to process." };
+var intervalOption = new Option<int>("--interval") { Description = "Sample interval in seconds." };
+var outputOption = new Option<string>("--output") { Description = "Output format: summary or json." };
 
 intervalOption.DefaultValueFactory = _ => 5;
 outputOption.DefaultValueFactory = _ => "summary";
