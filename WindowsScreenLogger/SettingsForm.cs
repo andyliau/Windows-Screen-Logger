@@ -169,7 +169,7 @@ public partial class SettingsForm : Form
 		// 
 		this.numericUpDownActivityInterval.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
 		this.numericUpDownActivityInterval.Location = new Point(250, 296);
-		this.numericUpDownActivityInterval.Minimum = 1;
+		this.numericUpDownActivityInterval.Minimum = 2;
 		this.numericUpDownActivityInterval.Maximum = 30;
 		this.numericUpDownActivityInterval.Name = "numericUpDownActivityInterval";
 		this.numericUpDownActivityInterval.Size = new Size(120, 29);

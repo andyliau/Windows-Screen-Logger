@@ -13,10 +13,8 @@ namespace WindowsScreenLogger.Services
     ///   .                                — same window still active (one dot per sample tick)
     ///
     /// Timing defaults:
-    ///   • Sample interval : 5 s  (configurable via ActivitySampleIntervalSeconds)
+    ///   • Sample interval : 5 s  (configurable via ActivitySampleIntervalSeconds, min 2 s)
     ///   • Buffer flush    : 60 s or when buffer reaches 12 lines, whichever comes first
-    ///   • Window-change write gate : 5 s  minimum between full records
-    ///   • Each dot = one sample interval of focus time (e.g. 5 s)
     ///
     /// Performance contract:
     ///   • Runs on the WinForms UI thread — no locks needed
@@ -25,7 +23,6 @@ namespace WindowsScreenLogger.Services
     /// </summary>
     public class ActivityLoggingService : IDisposable
     {
-        private const int MinChangeWriteSeconds = 5;
         private const int FlushIntervalSeconds  = 60;
         private const int FlushLineCount        = 12;
         private const int MaxTitleLength        = 80;
@@ -37,7 +34,6 @@ namespace WindowsScreenLogger.Services
 
         private string? _lastProc;
         private string? _lastTitle;
-        private DateTime _lastChangeWrite = DateTime.MinValue;
         private DateTime _lastFlush       = DateTime.Now;
         private string?  _bufferTargetPath;
 
@@ -75,13 +71,9 @@ namespace WindowsScreenLogger.Services
 
                 if (windowChanged)
                 {
-                    if ((now - _lastChangeWrite).TotalSeconds >= MinChangeWriteSeconds)
-                    {
-                        Buffer($"{now:HH:mm:ss} {procName} \"{title}\"");
-                        _lastProc = procName;
-                        _lastTitle = title;
-                        _lastChangeWrite = now;
-                    }
+                    Buffer($"{now:HH:mm:ss} {procName} \"{title}\"");
+                    _lastProc = procName;
+                    _lastTitle = title;
                 }
                 else
                 {
@@ -111,8 +103,8 @@ namespace WindowsScreenLogger.Services
         private void MaybeFlush(DateTime now)
         {
             // If the date has rolled over since this buffer was started, flush
-            // immediately so lines timestamped "23:59:xx" go to yesterday's file,
-            // not today's.
+            // immediately so lines timestamped "23:59:xx" go to yesterday's file.
+            // FlushBuffer handles seeding the new day's file with the active window.
             var todayPath = GetLogFilePath();
             if (_bufferTargetPath != null && _bufferTargetPath != todayPath)
             {
@@ -140,6 +132,7 @@ namespace WindowsScreenLogger.Services
             if (_buffer.Count == 0) return;
 
             var path = _bufferTargetPath ?? GetLogFilePath();
+            var isRollover = path != GetLogFilePath();
             try
             {
                 Directory.CreateDirectory(_config.GetEffectiveSavePath());
@@ -156,6 +149,11 @@ namespace WindowsScreenLogger.Services
                 _bufferTargetPath = null;
                 _lastFlush = DateTime.Now;
             }
+
+            // After a day-rollover flush, seed the new day's buffer with the
+            // current window so the new file never starts with orphaned dots.
+            if (isRollover && _lastProc != null)
+                Buffer($"{DateTime.Now:HH:mm:ss} {_lastProc} \"{_lastTitle}\"");
         }
 
         private static (string name, bool elevated) ResolveProcessName(int pid)

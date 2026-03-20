@@ -11,7 +11,7 @@ Runs as a system tray icon with near-zero CPU impact.
 - Adjustable image size (% of original resolution) and JPEG quality
 - Screenshots organised into daily date folders under your save path
 
-### Activity logging *(opt-in)*
+### Activity logging *(enabled by default)*
 - Records which window is in focus and for how long
 - Samples the foreground window every 5 s; buffers writes and flushes once per minute
 - One plain-text log file per day (`YYYY-MM-DD.log`) alongside the screenshot folders
@@ -46,7 +46,7 @@ The log is designed to be fed into an AI for daily work summarisation. A lightwe
 ## Requirements
 
 - Windows 10 22H2 or later (build 22000+)
-- .NET 9 (self-contained build — no separate install required)
+- .NET 10 (self-contained build — no separate install required)
 
 ## Installation
 
@@ -63,8 +63,9 @@ dotnet build
 
 1. Run the app — it appears in the system tray.
 2. Right-click the tray icon:
-   - **Settings** — configure capture interval, image size, quality, retention
+   - **Settings** — configure capture interval, image size, quality, retention, and activity logging
    - **Open Saved Image Folder** — opens the screenshot root in Explorer
+   - **Open Activity Log** — opens today's activity log in Notepad
    - **Clean Old Screenshots** — manually trigger cleanup
    - **Exit**
 
@@ -79,13 +80,13 @@ Settings are stored in `%APPDATA%\WindowsScreenLogger\config.json`.
 | `imageQuality` | `30` | JPEG quality (10–100) |
 | `clearDays` | `30` | Days to keep screenshots and activity logs |
 | `enableLogging` | `false` | Write diagnostic log file |
-| `enableActivityLogging` | `false` | Enable activity logging *(opt-in)* |
-| `activitySampleIntervalSeconds` | `5` | How often to poll the foreground window (1–30) |
+| `enableActivityLogging` | `true` | Enable activity logging |
+| `activitySampleIntervalSeconds` | `5` | How often to poll the foreground window (2–30) |
 | `startWithWindows` | `false` | Launch on login |
 
-### Enabling activity logging
+### Activity logging
 
-Set `enableActivityLogging` to `true` in `config.json`, or wait for the first-run notification that appears when the app starts for the first time.
+Activity logging is enabled by default. On first launch a balloon notification confirms it is active. You can disable it anytime via **Settings → Activity Logging**, or by setting `enableActivityLogging` to `false` in `config.json`.
 
 Activity logs are written to:
 ```

@@ -134,7 +134,7 @@ namespace WindowsScreenLogger
             ClearDays = Math.Max(1, Math.Min(365, ClearDays));
             CleanupIntervalHours = Math.Max(1, Math.Min(24, CleanupIntervalHours));
             MaxScreenshots = Math.Max(10, Math.Min(10000, MaxScreenshots));
-            ActivitySampleIntervalSeconds = Math.Max(1, Math.Min(30, ActivitySampleIntervalSeconds));
+            ActivitySampleIntervalSeconds = Math.Max(2, Math.Min(30, ActivitySampleIntervalSeconds));
 
             if (!IsValidLogLevel(LogLevel))
             {

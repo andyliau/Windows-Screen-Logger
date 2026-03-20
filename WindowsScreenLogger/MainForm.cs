@@ -156,7 +156,7 @@ public partial class MainForm : Form
 			activityTimer.Tick -= ActivityTimer_Tick;
 		}
 
-		var sampleInterval = Math.Max(5, Math.Min(60, config.ActivitySampleIntervalSeconds));
+		var sampleInterval = config.ActivitySampleIntervalSeconds;
 		activityTimer = new Timer { Interval = sampleInterval * 1000 };
 		activityTimer.Tick += ActivityTimer_Tick;
 
