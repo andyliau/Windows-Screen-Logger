@@ -50,7 +50,7 @@ namespace WindowsScreenLogger.Services
             }
 
             // Delete activity log files (YYYY-MM-DD.log) that are beyond the retention window
-            foreach (var logFile in Directory.GetFiles(rootPath, "????.??.??.log"))
+            foreach (var logFile in Directory.GetFiles(rootPath, "????-??-??.log"))
             {
                 var creationTime = File.GetCreationTime(logFile);
                 if ((DateTime.Now - creationTime).TotalDays > config.ClearDays)

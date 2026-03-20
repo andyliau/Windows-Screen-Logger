@@ -41,6 +41,7 @@ namespace WindowsScreenLogger.Services
         private DateTime _lastChangeWrite = DateTime.MinValue;
         private DateTime _lastSameWrite   = DateTime.MinValue;
         private DateTime _lastFlush       = DateTime.Now;
+        private string?  _bufferTargetPath; // file path captured when first line enters buffer
 
         public ActivityLoggingService(AppConfiguration config, ILogger logger)
         {
@@ -113,6 +114,16 @@ namespace WindowsScreenLogger.Services
 
         private void MaybeFlush(DateTime now)
         {
+            // If the date has rolled over since this buffer was started, flush
+            // immediately so lines timestamped "23:59:xx" go to yesterday's file,
+            // not today's.
+            var todayPath = GetLogFilePath();
+            if (_bufferTargetPath != null && _bufferTargetPath != todayPath)
+            {
+                FlushBuffer();
+                return;
+            }
+
             if (_buffer.Count >= FlushLineCount ||
                 (now - _lastFlush).TotalSeconds >= FlushIntervalSeconds)
             {
@@ -120,13 +131,19 @@ namespace WindowsScreenLogger.Services
             }
         }
 
-        private void Buffer(string line) => _buffer.Add(line);
+        private void Buffer(string line)
+        {
+            // Capture the target path on the first line — ensures the whole batch
+            // goes to the correct date's file even if a flush is delayed past midnight.
+            _bufferTargetPath ??= GetLogFilePath();
+            _buffer.Add(line);
+        }
 
         internal void FlushBuffer()
         {
             if (_buffer.Count == 0) return;
 
-            var path = GetLogFilePath();
+            var path = _bufferTargetPath ?? GetLogFilePath();
             try
             {
                 Directory.CreateDirectory(_config.GetEffectiveSavePath());
@@ -140,6 +157,7 @@ namespace WindowsScreenLogger.Services
             finally
             {
                 _buffer.Clear();
+                _bufferTargetPath = null;
                 _lastFlush = DateTime.Now;
             }
         }

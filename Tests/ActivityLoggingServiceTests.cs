@@ -116,6 +116,30 @@ namespace WindowsScreenLogger.Tests
             Assert.True(File.Exists(_sut.GetLogFilePath()));
         }
 
+        // ── Midnight rollover ─────────────────────────────────────────────────
+
+        [Fact]
+        public void MidnightRollover_YesterdaysLinesGoToYesterdaysFile()
+        {
+            // Simulate lines buffered before midnight by pointing _bufferTargetPath
+            // at a "yesterday" path, then trigger MaybeFlush with today's date.
+            var yesterday = DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd");
+            var yesterdayPath = Path.Combine(_tempDir, $"{yesterday}.log");
+            var todayPath = _sut.GetLogFilePath();
+
+            // Inject a line — Buffer() will capture today's path as _bufferTargetPath
+            InjectActivity("code", "Late night coding");
+
+            // Now overwrite _bufferTargetPath to simulate it was captured yesterday
+            BufferTargetPathField.SetValue(_sut, yesterdayPath);
+
+            // Trigger MaybeFlush — date mismatch should cause immediate flush to yesterday's file
+            _sut.FlushBuffer();
+
+            Assert.True(File.Exists(yesterdayPath), "Yesterday's lines should go to yesterday's file");
+            Assert.False(File.Exists(todayPath),    "Today's file should not be created");
+        }
+
         // ── Rate limiting ────────────────────────────────────────────────────
 
         [Fact]
@@ -197,13 +221,12 @@ namespace WindowsScreenLogger.Tests
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        private static readonly System.Reflection.FieldInfo LastProcField   = typeof(ActivityLoggingService).GetField("_lastProc",        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        private static readonly System.Reflection.FieldInfo LastTitleField  = typeof(ActivityLoggingService).GetField("_lastTitle",       System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        private static readonly System.Reflection.FieldInfo LastChangeField = typeof(ActivityLoggingService).GetField("_lastChangeWrite", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        private static readonly System.Reflection.FieldInfo LastSameField   = typeof(ActivityLoggingService).GetField("_lastSameWrite",   System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        private static readonly System.Reflection.FieldInfo BufferField     = typeof(ActivityLoggingService).GetField("_buffer",         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        private static readonly System.Reflection.MethodInfo WriteNewWindow = typeof(ActivityLoggingService).GetMethod("WriteNewWindow",  System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                                                                            ?? typeof(ActivityLoggingService).GetMethod("Buffer",         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.FieldInfo LastProcField        = typeof(ActivityLoggingService).GetField("_lastProc",          System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.FieldInfo LastTitleField       = typeof(ActivityLoggingService).GetField("_lastTitle",         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.FieldInfo LastChangeField      = typeof(ActivityLoggingService).GetField("_lastChangeWrite",   System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.FieldInfo LastSameField        = typeof(ActivityLoggingService).GetField("_lastSameWrite",     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.FieldInfo BufferField          = typeof(ActivityLoggingService).GetField("_buffer",            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        private static readonly System.Reflection.FieldInfo BufferTargetPathField= typeof(ActivityLoggingService).GetField("_bufferTargetPath",  System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
 
         /// <summary>
         /// Directly adds a formatted line to the buffer, bypassing P/Invoke AND rate limits.
