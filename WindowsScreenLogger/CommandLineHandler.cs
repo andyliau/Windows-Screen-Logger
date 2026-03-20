@@ -30,59 +30,65 @@ namespace WindowsScreenLogger
             var forceOption = new Option<bool>("--force", "Force installation even if already installed");
             var silentOption = new Option<bool>("--silent", "Perform silent installation without user prompts");
             var installCommand = new Command("install", "Install the application to the user's local folder");
-            installCommand.AddOption(forceOption);
-            installCommand.AddOption(silentOption);
-            installCommand.SetHandler((bool force, bool silent) => HandleInstallCommand(force, silent), forceOption, silentOption);
+            installCommand.Options.Add(forceOption);
+            installCommand.Options.Add(silentOption);
+            installCommand.SetAction(ctx => HandleInstallCommand(
+                ctx.GetValue(forceOption),
+                ctx.GetValue(silentOption)));
 
-            // Uninstall command  
+            // Uninstall command
             var quietOption = new Option<bool>("--quiet", "Perform quiet uninstallation without user prompts");
             var uninstallForceOption = new Option<bool>("--force", "Force uninstallation even if not properly installed");
             var uninstallCommand = new Command("uninstall", "Uninstall the application");
-            uninstallCommand.AddOption(quietOption);
-            uninstallCommand.AddOption(uninstallForceOption);
-            uninstallCommand.SetHandler((bool quiet, bool force) => HandleUninstallCommand(quiet, force), quietOption, uninstallForceOption);
+            uninstallCommand.Options.Add(quietOption);
+            uninstallCommand.Options.Add(uninstallForceOption);
+            uninstallCommand.SetAction(ctx => HandleUninstallCommand(
+                ctx.GetValue(quietOption),
+                ctx.GetValue(uninstallForceOption)));
 
             // Status command
             var statusCommand = new Command("status", "Show installation and application status");
-            statusCommand.SetHandler(HandleStatusCommand);
+            statusCommand.SetAction(_ => HandleStatusCommand());
 
             // Debug command for troubleshooting
             var debugCommand = new Command("debug", "Show detailed debug information");
-            debugCommand.SetHandler(HandleDebugCommand);
+            debugCommand.SetAction(_ => HandleDebugCommand());
 
             // Test command for uninstall functionality
             var testUninstallCommand = new Command("test-uninstall", "Test the uninstall process (dry run)");
-            testUninstallCommand.SetHandler(HandleTestUninstallCommand);
+            testUninstallCommand.SetAction(_ => HandleTestUninstallCommand());
 
             // Version command (alternative to --version)
             var versionCommand = new Command("version", "Show version information");
-            versionCommand.SetHandler(HandleVersionCommand);
+            versionCommand.SetAction(_ => HandleVersionCommand());
 
             // Run command (default behavior)
             var noInstallPromptOption = new Option<bool>("--no-install-prompt", "Skip installation prompt on first run");
             var configOption = new Option<string?>("--config", "Specify custom configuration file path");
             var runCommand = new Command("run", "Run the application (default)");
-            runCommand.AddOption(noInstallPromptOption);
-            runCommand.AddOption(configOption);
-            runCommand.SetHandler((bool noInstallPrompt, string? configPath) => HandleRunCommand(noInstallPrompt, configPath), noInstallPromptOption, configOption);
+            runCommand.Options.Add(noInstallPromptOption);
+            runCommand.Options.Add(configOption);
+            runCommand.SetAction(ctx => HandleRunCommand(
+                ctx.GetValue(noInstallPromptOption),
+                ctx.GetValue(configOption)));
 
-            // Add global options
-            rootCommand.AddGlobalOption(new Option<bool>("--verbose", "Enable verbose logging"));
-            rootCommand.AddGlobalOption(new Option<bool>("--debug", "Enable debug mode"));
-            rootCommand.AddGlobalOption(new Option<bool>("--post-install", "Internal flag for post-installation startup"));
+            // Add global options (added to root command)
+            rootCommand.Options.Add(new Option<bool>("--verbose", "Enable verbose logging"));
+            rootCommand.Options.Add(new Option<bool>("--debug", "Enable debug mode"));
+            var postInstallOption = new Option<bool>("--post-install", "Internal flag for post-installation startup");
+            rootCommand.Options.Add(postInstallOption);
 
-            // Add commands
-            rootCommand.AddCommand(installCommand);
-            rootCommand.AddCommand(uninstallCommand);
-            rootCommand.AddCommand(statusCommand);
-            rootCommand.AddCommand(debugCommand);
-            rootCommand.AddCommand(testUninstallCommand);
-            rootCommand.AddCommand(versionCommand);
-            rootCommand.AddCommand(runCommand);
+            // Add subcommands
+            rootCommand.Subcommands.Add(installCommand);
+            rootCommand.Subcommands.Add(uninstallCommand);
+            rootCommand.Subcommands.Add(statusCommand);
+            rootCommand.Subcommands.Add(debugCommand);
+            rootCommand.Subcommands.Add(testUninstallCommand);
+            rootCommand.Subcommands.Add(versionCommand);
+            rootCommand.Subcommands.Add(runCommand);
 
             // Set default handler for when no command is specified
-            rootCommand.SetHandler((bool postInstall) => HandleDefaultCommand(postInstall),
-                rootCommand.Options.OfType<Option<bool>>().First(o => o.Name == "post-install"));
+            rootCommand.SetAction(ctx => HandleDefaultCommand(ctx.GetValue(postInstallOption)));
 
             return rootCommand;
         }

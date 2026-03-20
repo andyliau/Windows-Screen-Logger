@@ -52,10 +52,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Microsoft.Windows.ImplementationLibrary" Version="1.0.250325.1" />
-	  <PackageReference Include="SkiaSharp" Version="3.119.0" />
+	  <PackageReference Include="Microsoft.Windows.ImplementationLibrary" Version="1.0.260126.7" />
+	  <PackageReference Include="SkiaSharp" Version="3.119.2" />
 	  <!-- Enhanced command line handling -->
-	  <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+	  <PackageReference Include="System.CommandLine" Version="2.0.5" />
 	</ItemGroup>
 
 	<!-- Installation Scripts as Embedded Resources -->
