@@ -46,6 +46,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+	    <_Parameter1>WindowsScreenLogger.Tests</_Parameter1>
+	  </AssemblyAttribute>
+	</ItemGroup>
+
+	<ItemGroup>
 	  <PackageReference Include="Microsoft.Windows.ImplementationLibrary" Version="1.0.250325.1" />
 	  <PackageReference Include="SkiaSharp" Version="3.119.0" />
 	  <!-- Enhanced command line handling -->
