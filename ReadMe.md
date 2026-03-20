@@ -28,8 +28,9 @@ Runs as a system tray icon with near-zero CPU impact.
 .
 ```
 `HH:mm:ss proc "title"` — window record  
+`.` — same window still active (one dot per sample, e.g. every 5 s)
 
-The log is designed to be fed into an AI for daily work summarisation. Duration in each window can be inferred from consecutive timestamps.
+The log is designed to be fed into an AI for daily work summarisation. A lightweight pre-processing script can count dots to compute focus duration (dots × sample interval = seconds spent).
 
 ### Session awareness
 - Pauses capture and logging when the session is locked; resumes on unlock

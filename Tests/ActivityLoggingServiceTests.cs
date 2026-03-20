@@ -59,6 +59,17 @@ namespace WindowsScreenLogger.Tests
         }
 
         [Fact]
+        public void HeartbeatDot_HasNoTimestamp()
+        {
+            InjectDot();
+            _sut.FlushBuffer();
+
+            var lines = ReadLines();
+            Assert.Single(lines);
+            Assert.Equal(".", lines[0]);
+        }
+
+        [Fact]
         public void ElevatedProcess_WritesUnknownElevated()
         {
             InjectElevated();
@@ -245,6 +256,11 @@ namespace WindowsScreenLogger.Tests
             LastProcField.SetValue(_sut, "unknown-elevated");
             LastTitleField.SetValue(_sut, "[elevated]");
             LastChangeField.SetValue(_sut, now);
+        }
+
+        private void InjectDot()
+        {
+            ((List<string>)BufferField.GetValue(_sut)!).Add(".");
         }
 
         private List<string> ReadLines()

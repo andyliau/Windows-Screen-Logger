@@ -10,11 +10,13 @@ namespace WindowsScreenLogger.Services
     ///
     /// Text format — one line per record, no schema:
     ///   HH:mm:ss proc "title"            — window changed or first record
+    ///   .                                — same window still active (one dot per sample tick)
     ///
     /// Timing defaults:
     ///   • Sample interval : 5 s  (configurable via ActivitySampleIntervalSeconds)
     ///   • Buffer flush    : 60 s or when buffer reaches 12 lines, whichever comes first
     ///   • Window-change write gate : 5 s  minimum between full records
+    ///   • Each dot = one sample interval of focus time (e.g. 5 s)
     ///
     /// Performance contract:
     ///   • Runs on the WinForms UI thread — no locks needed
@@ -80,6 +82,10 @@ namespace WindowsScreenLogger.Services
                         _lastTitle = title;
                         _lastChangeWrite = now;
                     }
+                }
+                else
+                {
+                    Buffer(".");
                 }
 
                 MaybeFlush(now);
