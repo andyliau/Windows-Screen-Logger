@@ -38,7 +38,7 @@ namespace WindowsScreenLogger
 					// Use modern System.CommandLine parser
 					logger.LogInformation("Processing with System.CommandLine parser");
 					var rootCommand = CommandLineHandler.CreateRootCommand();
-					var result = rootCommand.Invoke(args);
+					var result = rootCommand.Parse(args).Invoke();
 					logger.LogInformation($"Command line processing completed with exit code: {result}");
 					return;
 				}
