@@ -28,9 +28,8 @@ Runs as a system tray icon with near-zero CPU impact.
 .
 ```
 `HH:mm:ss proc "title"` — window record  
-`.` — same window still active (heartbeat, one per minute)
 
-The log is designed to be fed into an AI for daily work summarisation. A lightweight pre-processing script can expand `.` markers into duration spans before sending to the AI.
+The log is designed to be fed into an AI for daily work summarisation. Duration in each window can be inferred from consecutive timestamps.
 
 ### Session awareness
 - Pauses capture and logging when the session is locked; resumes on unlock
