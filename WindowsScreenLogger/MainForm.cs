@@ -94,6 +94,7 @@ public partial class MainForm : Form
 		notifyIcon.ContextMenuStrip = new ContextMenuStrip();
 		notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
 		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
+		notifyIcon.ContextMenuStrip.Items.Add("Open Activity Log", null, OpenActivityLog);
 		notifyIcon.ContextMenuStrip.Items.Add("Clean Old Screenshots", null, OnCleanClick);
 		
 		// Add uninstall option if application is installed
@@ -169,6 +170,11 @@ public partial class MainForm : Form
 			_logger.LogInformation("Activity logging is disabled. Set enableActivityLogging=true in config.json to track your daily work activity.");
 			ShowActivityLoggingIntroIfNeeded();
 		}
+
+		// Reflect activity logging state in the tray tooltip
+		notifyIcon.Text = config.EnableActivityLogging
+			? "Screen Logger (activity logging on)"
+			: "Screen Logger";
 	}
 
 	private void ShowActivityLoggingIntroIfNeeded()
@@ -222,6 +228,27 @@ public partial class MainForm : Form
 		if (settingsForm.ShowDialog() == DialogResult.OK)
 		{
 			Configure();
+		}
+	}
+
+	private void OpenActivityLog(object sender, EventArgs e)
+	{
+		var logPath = activityLoggingService.GetLogFilePath();
+		if (File.Exists(logPath))
+		{
+			Process.Start(new ProcessStartInfo("notepad.exe", logPath) { UseShellExecute = true });
+		}
+		else if (!config.EnableActivityLogging)
+		{
+			MessageBox.Show(
+				"Activity logging is currently disabled.\nEnable it in Settings → Activity Logging.",
+				"Activity Log", MessageBoxButtons.OK, MessageBoxIcon.Information);
+		}
+		else
+		{
+			// Logging is on but no entries recorded yet today
+			var folder = Path.GetDirectoryName(logPath)!;
+			Process.Start("explorer.exe", folder);
 		}
 	}
 

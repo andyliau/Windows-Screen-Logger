@@ -24,12 +24,17 @@ public partial class SettingsForm : Form
 		this.trackBarQuality = new TrackBar();
 		this.labelClearDays = new Label();
 		this.numericUpDownClearDays = new NumericUpDown();
+		this.labelActivitySection = new Label();
+		this.checkBoxEnableActivityLogging = new CheckBox();
+		this.labelActivityInterval = new Label();
+		this.numericUpDownActivityInterval = new NumericUpDown();
 		this.buttonSave = new Button();
 		this.buttonCancel = new Button();
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownInterval)).BeginInit();
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownImageSize)).BeginInit();
 		((System.ComponentModel.ISupportInitialize)(this.trackBarQuality)).BeginInit();
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownClearDays)).BeginInit();
+		((System.ComponentModel.ISupportInitialize)(this.numericUpDownActivityInterval)).BeginInit();
 		this.SuspendLayout();
 		// 
 		// label1
@@ -127,13 +132,57 @@ public partial class SettingsForm : Form
 		this.numericUpDownClearDays.TabIndex = 8;
 		this.numericUpDownClearDays.Value = new decimal(new int[] { 30, 0, 0, 0 });
 		// 
+		// labelActivitySection
+		// 
+		this.labelActivitySection.AutoSize = false;
+		this.labelActivitySection.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point);
+		this.labelActivitySection.Location = new Point(20, 235);
+		this.labelActivitySection.Name = "labelActivitySection";
+		this.labelActivitySection.Size = new Size(360, 20);
+		this.labelActivitySection.TabIndex = 9;
+		this.labelActivitySection.Text = "Activity Logging";
+		this.labelActivitySection.BorderStyle = BorderStyle.None;
+		this.labelActivitySection.ForeColor = SystemColors.ControlDarkDark;
+		// 
+		// checkBoxEnableActivityLogging
+		// 
+		this.checkBoxEnableActivityLogging.AutoSize = true;
+		this.checkBoxEnableActivityLogging.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.checkBoxEnableActivityLogging.Location = new Point(20, 262);
+		this.checkBoxEnableActivityLogging.Name = "checkBoxEnableActivityLogging";
+		this.checkBoxEnableActivityLogging.Size = new Size(200, 25);
+		this.checkBoxEnableActivityLogging.TabIndex = 10;
+		this.checkBoxEnableActivityLogging.Text = "Enable Activity Logging";
+		this.checkBoxEnableActivityLogging.UseVisualStyleBackColor = true;
+		// 
+		// labelActivityInterval
+		// 
+		this.labelActivityInterval.AutoSize = true;
+		this.labelActivityInterval.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.labelActivityInterval.Location = new Point(20, 298);
+		this.labelActivityInterval.Name = "labelActivityInterval";
+		this.labelActivityInterval.Size = new Size(200, 21);
+		this.labelActivityInterval.TabIndex = 11;
+		this.labelActivityInterval.Text = "Sample interval (seconds):";
+		// 
+		// numericUpDownActivityInterval
+		// 
+		this.numericUpDownActivityInterval.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+		this.numericUpDownActivityInterval.Location = new Point(250, 296);
+		this.numericUpDownActivityInterval.Minimum = 1;
+		this.numericUpDownActivityInterval.Maximum = 30;
+		this.numericUpDownActivityInterval.Name = "numericUpDownActivityInterval";
+		this.numericUpDownActivityInterval.Size = new Size(120, 29);
+		this.numericUpDownActivityInterval.TabIndex = 12;
+		this.numericUpDownActivityInterval.Value = 5;
+		// 
 		// buttonSave
 		// 
 		this.buttonSave.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-		this.buttonSave.Location = new Point(100, 250);
+		this.buttonSave.Location = new Point(100, 345);
 		this.buttonSave.Name = "buttonSave";
 		this.buttonSave.Size = new Size(100, 30);
-		this.buttonSave.TabIndex = 9;
+		this.buttonSave.TabIndex = 13;
 		this.buttonSave.Text = "Save";
 		this.buttonSave.UseVisualStyleBackColor = true;
 		this.buttonSave.Click += new EventHandler(this.ButtonSave_Click);
@@ -141,10 +190,10 @@ public partial class SettingsForm : Form
 		// buttonCancel
 		// 
 		this.buttonCancel.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-		this.buttonCancel.Location = new Point(220, 250);
+		this.buttonCancel.Location = new Point(220, 345);
 		this.buttonCancel.Name = "buttonCancel";
 		this.buttonCancel.Size = new Size(100, 30);
-		this.buttonCancel.TabIndex = 10;
+		this.buttonCancel.TabIndex = 14;
 		this.buttonCancel.Text = "Cancel";
 		this.buttonCancel.UseVisualStyleBackColor = true;
 		this.buttonCancel.Click += new EventHandler(this.ButtonCancel_Click);
@@ -153,7 +202,11 @@ public partial class SettingsForm : Form
 		// 
 		this.AutoScaleDimensions = new SizeF(7F, 15F);
 		this.AutoScaleMode = AutoScaleMode.Font;
-		this.ClientSize = new Size(400, 320); // Increase form height to accommodate the adjusted controls
+		this.ClientSize = new Size(400, 400);
+		this.Controls.Add(this.numericUpDownActivityInterval);
+		this.Controls.Add(this.labelActivityInterval);
+		this.Controls.Add(this.checkBoxEnableActivityLogging);
+		this.Controls.Add(this.labelActivitySection);
 		this.Controls.Add(this.numericUpDownClearDays);
 		this.Controls.Add(this.labelClearDays);
 		this.Controls.Add(this.buttonCancel);
@@ -176,6 +229,7 @@ public partial class SettingsForm : Form
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownImageSize)).EndInit();
 		((System.ComponentModel.ISupportInitialize)(this.trackBarQuality)).EndInit();
 		((System.ComponentModel.ISupportInitialize)(this.numericUpDownClearDays)).EndInit();
+		((System.ComponentModel.ISupportInitialize)(this.numericUpDownActivityInterval)).EndInit();
 		this.ResumeLayout(false);
 		this.PerformLayout();
 	}
@@ -189,6 +243,10 @@ public partial class SettingsForm : Form
 	private TrackBar trackBarQuality;
 	private Label labelClearDays;
 	private NumericUpDown numericUpDownClearDays;
+	private Label labelActivitySection;
+	private CheckBox checkBoxEnableActivityLogging;
+	private Label labelActivityInterval;
+	private NumericUpDown numericUpDownActivityInterval;
 	private Button buttonSave;
 	private Button buttonCancel;
 
@@ -199,6 +257,11 @@ public partial class SettingsForm : Form
 		numericUpDownImageSize.Value = _config.ImageSizePercentage;
 		trackBarQuality.Value = _config.ImageQuality;
 		numericUpDownClearDays.Value = _config.ClearDays;
+		checkBoxEnableActivityLogging.Checked = _config.EnableActivityLogging;
+		numericUpDownActivityInterval.Value = _config.ActivitySampleIntervalSeconds;
+		numericUpDownActivityInterval.Enabled = _config.EnableActivityLogging;
+		checkBoxEnableActivityLogging.CheckedChanged += (s, _) =>
+			numericUpDownActivityInterval.Enabled = checkBoxEnableActivityLogging.Checked;
 	}
 
 	private void ButtonSave_Click(object sender, EventArgs e)
@@ -208,6 +271,8 @@ public partial class SettingsForm : Form
 		_config.ImageQuality = trackBarQuality.Value;
 		_config.ClearDays = (int)numericUpDownClearDays.Value;
 		_config.StartWithWindows = checkBoxStartWithWindows.Checked;
+		_config.EnableActivityLogging = checkBoxEnableActivityLogging.Checked;
+		_config.ActivitySampleIntervalSeconds = (int)numericUpDownActivityInterval.Value;
 		_config.Save();
 
 		// Set or remove startup entry
