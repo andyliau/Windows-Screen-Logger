@@ -112,11 +112,14 @@ namespace WindowsScreenLogger.Services
         {
             // If the date has rolled over since this buffer was started, flush
             // immediately so lines timestamped "23:59:xx" go to yesterday's file,
-            // not today's.
+            // not today's. Then reset last-window state so the new day's file
+            // always starts with a full window record, never an orphaned dot.
             var todayPath = GetLogFilePath();
             if (_bufferTargetPath != null && _bufferTargetPath != todayPath)
             {
                 FlushBuffer();
+                _lastProc  = null;
+                _lastTitle = null;
                 return;
             }
 

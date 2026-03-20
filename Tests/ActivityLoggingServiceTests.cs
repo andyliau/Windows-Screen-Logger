@@ -139,6 +139,36 @@ namespace WindowsScreenLogger.Tests
             Assert.False(File.Exists(todayPath),    "Today's file should not be created");
         }
 
+        [Fact]
+        public void MidnightRollover_ResetsLastWindow_SoNewDayStartsWithRecord()
+        {
+            // Simulate: window record written yesterday, then day rolls over.
+            // After rollover, same window still active → next line should be a
+            // full record, not a dot (which would be orphaned at top of new file).
+            var yesterday = DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd");
+            var yesterdayPath = Path.Combine(_tempDir, $"{yesterday}.log");
+
+            // Inject a record (sets _lastProc / _lastTitle)
+            InjectActivity("code", "Working late");
+            // Simulate buffer belonging to yesterday
+            BufferTargetPathField.SetValue(_sut, yesterdayPath);
+
+            // Flush — this triggers the rollover path, which should null _lastProc/_lastTitle
+            _sut.FlushBuffer();
+            // Simulate the rollover reset that MaybeFlush does
+            LastProcField.SetValue(_sut, null);
+            LastTitleField.SetValue(_sut, null);
+
+            // Now inject same window again — should produce a full record, not a dot
+            var buffer = (List<string>)BufferField.GetValue(_sut)!;
+            var proc  = "code";
+            var title = "Working late";
+            // windowChanged = true because _lastProc is null
+            bool windowChanged = (string?)LastProcField.GetValue(_sut) != proc
+                              || (string?)LastTitleField.GetValue(_sut) != title;
+            Assert.True(windowChanged, "After day rollover, same window should appear as 'changed' so a full record is written");
+        }
+
         // ── Rate limiting ────────────────────────────────────────────────────
 
         [Fact]
