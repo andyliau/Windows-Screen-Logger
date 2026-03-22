@@ -63,12 +63,11 @@ public static class FriendlyNameResolver
         if (UserOverrides.Value.TryGetValue(processName, out var user))
             return ResolvedCache[processName] = user;
 
-        var fromRegistry = LookupRegistry(processName);
-        if (fromRegistry is not null)
-            return ResolvedCache[processName] = fromRegistry;
+        if (Hardcoded.TryGetValue(processName, out var hardcoded))
+            return ResolvedCache[processName] = hardcoded;
 
-        var hardcoded = Hardcoded.TryGetValue(processName, out var h) ? h : null;
-        return ResolvedCache[processName] = hardcoded;
+        var fromRegistry = LookupRegistry(processName);
+        return ResolvedCache[processName] = fromRegistry;
     }
 
     private static string? LookupRegistry(string processName)
