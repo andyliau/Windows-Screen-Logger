@@ -4,6 +4,17 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g. 1.0.0) — no leading v'
+        required: true
+        default: '0.0.0-test'
+      create_release:
+        description: 'Create a GitHub Release? (false = build/test only)'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # required to create GitHub Releases
@@ -20,11 +31,19 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # Strip leading 'v' from tag → "1.2.0"
-      - name: Extract version
+      # For tag pushes: strip leading 'v' from tag → "1.2.0"
+      # For manual runs: use the version input directly
+      - name: Resolve version
         id: version
         shell: pwsh
-        run: echo "number=$('${{ github.ref_name }}'.TrimStart('v'))" >> $env:GITHUB_OUTPUT
+        run: |
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            echo "number=${{ github.event.inputs.version }}" >> $env:GITHUB_OUTPUT
+            echo "ref_name=v${{ github.event.inputs.version }}" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "number=$('${{ github.ref_name }}'.TrimStart('v'))" >> $env:GITHUB_OUTPUT
+            echo "ref_name=${{ github.ref_name }}" >> $env:GITHUB_OUTPUT
+          }
 
       - name: Run tests
         run: dotnet test Tests/WindowsScreenLogger.Tests.csproj -c Release --logger "console;verbosity=normal"
@@ -47,13 +66,23 @@ jobs:
       - name: Package artifacts
         shell: pwsh
         run: |
-          Compress-Archive publish/app/*      WindowsScreenLogger-${{ github.ref_name }}-win-x64.zip
-          Compress-Archive publish/processor/* ActivityLogProcessor-${{ github.ref_name }}-win-x64.zip
+          Compress-Archive publish/app/*      "WindowsScreenLogger-${{ steps.version.outputs.ref_name }}-win-x64.zip"
+          Compress-Archive publish/processor/* "ActivityLogProcessor-${{ steps.version.outputs.ref_name }}-win-x64.zip"
+
+      - name: Upload build artifacts (manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ steps.version.outputs.number }}
+          path: '*.zip'
+          retention-days: 7
 
       - name: Create GitHub Release
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.ref_name }}
           generate_release_notes: true
           files: |
-            WindowsScreenLogger-${{ github.ref_name }}-win-x64.zip
-            ActivityLogProcessor-${{ github.ref_name }}-win-x64.zip
+            WindowsScreenLogger-${{ steps.version.outputs.ref_name }}-win-x64.zip
+            ActivityLogProcessor-${{ steps.version.outputs.ref_name }}-win-x64.zip
