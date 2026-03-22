@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write   # required to create GitHub Releases
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Strip leading 'v' from tag → "1.2.0"
+      - name: Extract version
+        id: version
+        shell: pwsh
+        run: echo "number=$('${{ github.ref_name }}'.TrimStart('v'))" >> $env:GITHUB_OUTPUT
+
+      - name: Run tests
+        run: dotnet test Tests/WindowsScreenLogger.Tests.csproj -c Release --logger "console;verbosity=normal"
+
+      - name: Publish WindowsScreenLogger
+        run: |
+          dotnet publish WindowsScreenLogger/WindowsScreenLogger.csproj `
+            -c Release `
+            -p:Version=${{ steps.version.outputs.number }} `
+            -o publish/app
+
+      - name: Publish ActivityLogProcessor
+        run: |
+          dotnet publish ActivityLogProcessor/ActivityLogProcessor.csproj `
+            -c Release `
+            -r win-x64 --self-contained true -p:PublishSingleFile=true `
+            -p:Version=${{ steps.version.outputs.number }} `
+            -o publish/processor
+
+      - name: Package artifacts
+        shell: pwsh
+        run: |
+          Compress-Archive publish/app/*      WindowsScreenLogger-${{ github.ref_name }}-win-x64.zip
+          Compress-Archive publish/processor/* ActivityLogProcessor-${{ github.ref_name }}-win-x64.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            WindowsScreenLogger-${{ github.ref_name }}-win-x64.zip
+            ActivityLogProcessor-${{ github.ref_name }}-win-x64.zip
