@@ -24,19 +24,6 @@ public sealed record ActivitySummary(
 
 public static class ActivitySummariser
 {
-    private static readonly IReadOnlyDictionary<string, string> FriendlyNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-    {
-        ["code"]    = "Visual Studio Code",
-        ["devenv"]  = "Visual Studio",
-        ["chrome"]  = "Google Chrome",
-        ["msedge"]  = "Microsoft Edge",
-        ["firefox"] = "Mozilla Firefox",
-        ["teams"]   = "Microsoft Teams",
-        ["slack"]   = "Slack",
-        ["outlook"] = "Microsoft Outlook",
-        ["explorer"]= "Windows Explorer",
-    };
-
     public static ActivitySummary Summarise(
         IReadOnlyList<ActivityEntry> entries,
         int sampleIntervalSeconds = 5,
@@ -62,7 +49,7 @@ public static class ActivitySummariser
             .Select(kv => new AppSummary(
                 kv.Key,
                 kv.Value,
-                FriendlyNames.TryGetValue(kv.Key, out var name) ? name : null))
+                FriendlyNameResolver.Resolve(kv.Key)))
             .ToList();
 
         var windowSummaries = byWindow

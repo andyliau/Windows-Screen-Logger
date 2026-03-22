@@ -227,7 +227,7 @@ public class ActivitySummariserTests
     [Fact]
     public void Summarise_UnknownProcess_HasNullFriendlyName()
     {
-        var entries = new[] { MakeEntry("notepad", "Untitled", 0) };
+        var entries = new[] { MakeEntry("totallyrandomapp99", "Untitled", 0) };
         var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5);
 
         Assert.Null(summary.ByApplication[0].FriendlyName);
