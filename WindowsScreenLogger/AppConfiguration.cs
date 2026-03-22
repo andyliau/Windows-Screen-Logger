@@ -60,6 +60,13 @@ namespace WindowsScreenLogger
         public int ActivitySampleIntervalSeconds { get; set; } = 5;
 
         /// <summary>
+        /// Directory where activity summary files are written by ActivityLogProcessor.
+        /// Null means the processor only writes to stdout.
+        /// </summary>
+        [JsonPropertyName("activitySummaryOutputDir")]
+        public string? ActivitySummaryOutputDir { get; set; }
+
+        /// <summary>
         /// Set to true once the first-run activity logging intro notification has been shown.
         /// </summary>
         [JsonPropertyName("activityLoggingIntroShown")]

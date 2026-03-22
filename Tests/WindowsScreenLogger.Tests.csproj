@@ -3,7 +3,15 @@
   <PropertyGroup>
     <TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
     <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="ActivityLogProcessor.Tests\**" />
+    <EmbeddedResource Remove="ActivityLogProcessor.Tests\**" />
+    <None Remove="ActivityLogProcessor.Tests\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
@@ -21,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WindowsScreenLogger\WindowsScreenLogger.csproj" />
+    <ProjectReference Include="..\ActivityLogProcessor\ActivityLogProcessor.csproj" />
   </ItemGroup>
 
 </Project>
