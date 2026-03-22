@@ -1,5 +1,5 @@
 @echo off
-rem Windows Screen Logger Uninstaller
+rem Windows Activity Logger Uninstaller
 rem This script removes the installation directory after the application exits
 
 rem Wait for the application to fully exit

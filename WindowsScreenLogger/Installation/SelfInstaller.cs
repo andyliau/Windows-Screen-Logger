@@ -6,7 +6,7 @@ namespace WindowsScreenLogger.Installation
 {
     public static class SelfInstaller
     {
-        private const string AppName = "Windows Screen Logger";
+        private const string AppName = "Windows Activity Logger";
 
         public static string InstallPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
         public static string InstalledExecutablePath => Path.Combine(InstallPath, "WindowsScreenLogger.exe");
@@ -426,7 +426,7 @@ del ""%~f0"" >nul 2>&1
             try
             {
                 // Clean up application data folder
-                var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WindowsScreenLogger");
+                var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WindowsActivityLogger");
                 if (Directory.Exists(appDataPath))
                 {
                     try

@@ -7,7 +7,7 @@ namespace ActivityLogProcessor;
 /// Resolves a process name to a human-readable application name.
 ///
 /// Priority chain (first match wins):
-///   1. User overrides  — %APPDATA%\WindowsScreenLogger\friendly-names.json
+///   1. User overrides  — %APPDATA%\WindowsActivityLogger\friendly-names.json
 ///   2. Registry lookup — HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\{name}.exe → ProductName
 ///   3. Hardcoded       — small fallback table for common apps
 /// </summary>
@@ -98,7 +98,7 @@ public static class FriendlyNameResolver
     {
         var path = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "WindowsScreenLogger",
+            "WindowsActivityLogger",
             "friendly-names.json");
 
         if (!File.Exists(path))

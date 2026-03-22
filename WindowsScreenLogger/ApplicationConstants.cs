@@ -1,7 +1,7 @@
 namespace WindowsScreenLogger
 {
     /// <summary>
-    /// Centralized constants for the Windows Screen Logger application.
+    /// Centralized constants for the Windows Activity Logger application.
     /// This class contains all magic numbers, default values, and configuration constants.
     /// </summary>
     public static class ApplicationConstants
@@ -9,12 +9,12 @@ namespace WindowsScreenLogger
         /// <summary>
         /// Application name used for registry, installation paths, and logging
         /// </summary>
-        public const string ApplicationName = "WindowsScreenLogger";
+        public const string ApplicationName = "WindowsActivityLogger";
 
         /// <summary>
         /// Mutex name used to ensure only one instance runs at a time
         /// </summary>
-        public const string InstanceMutexName = "WindowsScreenLoggerMutex";
+        public const string InstanceMutexName = "WindowsActivityLoggerMutex";
 
         /// <summary>
         /// Default capture interval in seconds

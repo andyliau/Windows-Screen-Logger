@@ -72,7 +72,7 @@ namespace WindowsScreenLogger
 				// Clean up old logs
 				logger.CleanupOldLogs();
 
-				const string mutexName = "WindowsScreenLoggerMutex";
+				const string mutexName = "WindowsActivityLoggerMutex";
 
 				// Ensure only one instance is running
 				bool createdNew;

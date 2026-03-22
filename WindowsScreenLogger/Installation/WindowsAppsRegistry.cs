@@ -8,9 +8,9 @@ namespace WindowsScreenLogger.Installation
     /// </summary>
     public static class WindowsAppsRegistry
     {
-        private const string AppName = "Windows Screen Logger";
+        private const string AppName = "Windows Activity Logger";
         private const string AppVersion = "1.0.0";
-        private const string AppPublisher = "WindowsScreenLogger";
+        private const string AppPublisher = "WindowsActivityLogger";
         private const string AppGuid = "{B3E7C6A8-9F2D-4E5A-B1C3-8D7F6E9A2B4C}";
 
         public static void RegisterApplication(string installPath, string executablePath)

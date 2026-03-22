@@ -1,4 +1,4 @@
-# Windows Screen Logger Uninstaller
+# Windows Activity Logger Uninstaller
 # This script removes the installation directory after the application exits
 
 param(

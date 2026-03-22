@@ -24,7 +24,7 @@ namespace WindowsScreenLogger
         /// </summary>
         public static RootCommand CreateRootCommand()
         {
-            var rootCommand = new RootCommand("Windows Screen Logger - Automated screen capture utility");
+            var rootCommand = new RootCommand("Windows Activity Logger - Automated screen capture and activity tracker");
 
             // Install command
             var forceOption = new Option<bool>("--force", "Force installation even if already installed");
@@ -277,8 +277,8 @@ namespace WindowsScreenLogger
                 var assembly = Assembly.GetExecutingAssembly();
                 var version = assembly.GetName().Version?.ToString() ?? "Unknown";
 
-                Console.WriteLine("Windows Screen Logger Status");
-                Console.WriteLine("============================");
+                Console.WriteLine("Windows Activity Logger Status");
+                Console.WriteLine("==============================");
                 Console.WriteLine($"Version: {version}");
                 Console.WriteLine($"Current Location: {Application.ExecutablePath}");
                 Console.WriteLine($"Installation Status: {SelfInstaller.GetInstallationStatus()}");
@@ -309,10 +309,10 @@ namespace WindowsScreenLogger
             var version = assembly.GetName().Version?.ToString() ?? "Unknown";
             var fileVersion = FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion ?? "Unknown";
             
-            Console.WriteLine($"Windows Screen Logger v{version}");
+            Console.WriteLine($"Windows Activity Logger v{version}");
             Console.WriteLine($"File Version: {fileVersion}");
             Console.WriteLine($"Target Framework: .NET 9.0");
-            Console.WriteLine($"Copyright � 2024 WindowsScreenLogger");
+            Console.WriteLine($"Copyright \u00a9 2024 WindowsActivityLogger");
         }
 
         private static void HandleRunCommand(bool noInstallPrompt = false, string? configPath = null)
@@ -342,15 +342,15 @@ namespace WindowsScreenLogger
             // Set startup registry entry to installed location
             StartupRegistry.SetStartupRegistration(true, SelfInstaller.InstalledExecutablePath);
 
-            Console.WriteLine($"Windows Screen Logger installed successfully to: {SelfInstaller.InstallPath}");
+            Console.WriteLine($"Windows Activity Logger installed successfully to: {SelfInstaller.InstallPath}");
         }
 
         private static void HandleDebugCommand()
         {
             try
             {
-                Console.WriteLine("Windows Screen Logger - Debug Information");
-                Console.WriteLine("=========================================");
+                Console.WriteLine("Windows Activity Logger - Debug Information");
+                Console.WriteLine("===========================================");
                 
                 // Basic information
                 var assembly = Assembly.GetExecutingAssembly();
@@ -435,8 +435,8 @@ namespace WindowsScreenLogger
         {
             try
             {
-                Console.WriteLine("Windows Screen Logger - Uninstall Test");
-                Console.WriteLine("=====================================");
+                Console.WriteLine("Windows Activity Logger - Uninstall Test");
+                Console.WriteLine("=======================================");
                 
                 // Test installation detection
                 bool isInstalled = SelfInstaller.IsInstalled();

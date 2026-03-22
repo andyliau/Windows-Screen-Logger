@@ -87,7 +87,7 @@ public partial class MainForm : Form
 		// 
 		// notifyIcon
 		// 
-		notifyIcon.Text = "Screen Logger";
+		notifyIcon.Text = "Activity Logger";
 		notifyIcon.Icon = this.Icon;
 		notifyIcon.Visible = true;
 		notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
@@ -173,8 +173,8 @@ public partial class MainForm : Form
 
 		// Reflect activity logging state in the tray tooltip
 		notifyIcon.Text = config.EnableActivityLogging
-			? "Screen Logger (activity logging on)"
-			: "Screen Logger";
+			? "Activity Logger (logging on)"
+			: "Activity Logger";
 	}
 
 	private void ShowActivityLoggingIntroIfNeeded()
@@ -186,7 +186,7 @@ public partial class MainForm : Form
 			notifyIcon.ShowBalloonTip(
 				8000,
 				"Activity Logging Active",
-				"Windows Screen Logger is tracking your active windows to help summarise your daily work.\n" +
+				"Windows Activity Logger is tracking your active windows to help summarise your daily work.\n" +
 				"Logs are saved alongside your screenshots. Disable anytime in Settings → Activity Logging.",
 				ToolTipIcon.Info),
 			TaskScheduler.FromCurrentSynchronizationContext());
@@ -337,7 +337,7 @@ public partial class MainForm : Form
 		}
 
 		var result = MessageBox.Show(
-			"Are you sure you want to uninstall Windows Screen Logger?\n\n" +
+			"Are you sure you want to uninstall Windows Activity Logger?\n\n" +
 			"This will:\n" +
 			"� Remove the application from your system\n" +
 			"� Remove it from Windows Apps & Features\n" +

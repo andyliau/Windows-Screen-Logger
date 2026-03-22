@@ -8,7 +8,7 @@ namespace WindowsScreenLogger.Installation
     /// </summary>
     public static class StartupRegistry
     {
-        private const string AppName = "Windows Screen Logger";
+        private const string AppName = "Windows Activity Logger";
         private const string RunKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
 
         /// <summary>
