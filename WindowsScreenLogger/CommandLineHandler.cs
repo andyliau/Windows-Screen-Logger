@@ -1,9 +1,9 @@
 using System.CommandLine;
 using System.Diagnostics;
 using System.Reflection;
-using WindowsScreenLogger.Installation;
+using WindowsActivityLogger.Installation;
 
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
     /// <summary>
     /// Enhanced command line argument handling using System.CommandLine
@@ -451,12 +451,12 @@ namespace WindowsScreenLogger
                 
                 // Test process detection
                 var currentProcess = Process.GetCurrentProcess();
-                var processes = Process.GetProcessesByName("WindowsScreenLogger")
+                var processes = Process.GetProcessesByName("WindowsActivityLogger")
                     .Where(p => p.Id != currentProcess.Id)
                     .ToArray();
                 
                 Console.WriteLine($"Current Process ID: {currentProcess.Id}");
-                Console.WriteLine($"Other WindowsScreenLogger processes found: {processes.Length}");
+                Console.WriteLine($"Other WindowsActivityLogger processes found: {processes.Length}");
                 
                 foreach (var process in processes)
                 {

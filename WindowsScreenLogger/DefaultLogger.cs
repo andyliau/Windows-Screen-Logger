@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
     /// <summary>
     /// Default implementation of ILogger that matches the AppLogger functionality

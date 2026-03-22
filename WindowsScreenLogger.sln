@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.2.11415.280
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsScreenLogger", "WindowsScreenLogger\WindowsScreenLogger.csproj", "{1B42DD61-9518-4A14-98A7-29220276ECDC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsActivityLogger", "WindowsActivityLogger\WindowsActivityLogger.csproj", "{1B42DD61-9518-4A14-98A7-29220276ECDC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsScreenLogger.Tests", "Tests\WindowsScreenLogger.Tests.csproj", "{D1B2A1B2-1234-4C84-943B-7DE0EF85C799}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsActivityLogger.Tests", "Tests\WindowsActivityLogger.Tests.csproj", "{D1B2A1B2-1234-4C84-943B-7DE0EF85C799}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActivityLogProcessor", "ActivityLogProcessor\ActivityLogProcessor.csproj", "{69C5995E-1CB3-4664-B6AA-C71AF14BBEF7}"
 EndProject

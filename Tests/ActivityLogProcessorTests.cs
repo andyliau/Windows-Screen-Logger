@@ -2,7 +2,7 @@ using System.Text.Json;
 using ActivityLogProcessor;
 using Xunit;
 
-namespace WindowsScreenLogger.Tests;
+namespace WindowsActivityLogger.Tests;
 
 public class LogParserTests
 {

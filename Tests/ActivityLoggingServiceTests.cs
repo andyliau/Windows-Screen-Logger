@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using WindowsScreenLogger;
-using WindowsScreenLogger.Services;
+using WindowsActivityLogger;
+using WindowsActivityLogger.Services;
 using Xunit;
 
-namespace WindowsScreenLogger.Tests
+namespace WindowsActivityLogger.Tests
 {
     public class ActivityLoggingServiceTests : IDisposable
     {

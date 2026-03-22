@@ -1,8 +1,8 @@
 using System.CommandLine;
 using System.Diagnostics;
-using WindowsScreenLogger.Installation;
+using WindowsActivityLogger.Installation;
 
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
 	internal static class Program
 	{

@@ -1,7 +1,7 @@
 using SkiaSharp;
 using System.Diagnostics;
 
-namespace WindowsScreenLogger.Services
+namespace WindowsActivityLogger.Services
 {
     /// <summary>
     /// Service responsible for capturing and saving screenshots

@@ -1,4 +1,4 @@
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
     /// <summary>
     /// Centralized constants for the Windows Activity Logger application.

@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\WindowsScreenLogger\WindowsScreenLogger.csproj" />
+    <ProjectReference Include="..\WindowsActivityLogger\WindowsActivityLogger.csproj" />
     <ProjectReference Include="..\ActivityLogProcessor\ActivityLogProcessor.csproj" />
   </ItemGroup>
 

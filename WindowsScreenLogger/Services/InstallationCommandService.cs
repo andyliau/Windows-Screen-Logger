@@ -1,6 +1,6 @@
-using WindowsScreenLogger.Installation;
+using WindowsActivityLogger.Installation;
 
-namespace WindowsScreenLogger.Services
+namespace WindowsActivityLogger.Services
 {
     /// <summary>
     /// Service for handling installation-related commands

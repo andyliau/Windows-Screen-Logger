@@ -4,7 +4,7 @@
 
 ### 2026-03-19: Settings.Default deprecated, AppConfiguration is authoritative
 **By:** Nova
-**What:** Settings.Default (ApplicationSettingsBase) is fully removed. AppConfiguration (JSON at %APPDATA%\WindowsScreenLogger\config.json) is the single source of truth for all user configuration. No code should reference Settings.Default.
+**What:** Settings.Default (ApplicationSettingsBase) is fully removed. AppConfiguration (JSON at %APPDATA%\WindowsActivityLogger\config.json) is the single source of truth for all user configuration. No code should reference Settings.Default.
 **Why:** Settings.Default and AppConfiguration were running in parallel, causing every user settings change to be silently discarded on restart. The JSON-backed AppConfiguration is more testable, portable, and explicit.
 
 ---

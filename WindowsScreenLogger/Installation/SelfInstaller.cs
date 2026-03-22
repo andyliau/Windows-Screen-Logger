@@ -2,14 +2,14 @@ using Microsoft.Win32;
 using System.Diagnostics;
 using System.Security.Principal;
 
-namespace WindowsScreenLogger.Installation
+namespace WindowsActivityLogger.Installation
 {
     public static class SelfInstaller
     {
         private const string AppName = "Windows Activity Logger";
 
         public static string InstallPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
-        public static string InstalledExecutablePath => Path.Combine(InstallPath, "WindowsScreenLogger.exe");
+        public static string InstalledExecutablePath => Path.Combine(InstallPath, "WindowsActivityLogger.exe");
 
         public static bool IsRunningFromInstallLocation()
         {
@@ -168,24 +168,24 @@ del ""%~f0"" >nul 2>&1
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("Checking for running WindowsScreenLogger processes");
+                System.Diagnostics.Debug.WriteLine("Checking for running WindowsActivityLogger processes");
                 
                 // Get current process to avoid terminating ourselves if we're the uninstaller
                 var currentProcess = Process.GetCurrentProcess();
                 var currentProcessId = currentProcess.Id;
                 
-                // Find all WindowsScreenLogger processes
-                var processes = Process.GetProcessesByName("WindowsScreenLogger")
+                // Find all WindowsActivityLogger processes
+                var processes = Process.GetProcessesByName("WindowsActivityLogger")
                     .Where(p => p.Id != currentProcessId) // Don't terminate ourselves
                     .ToArray();
                 
                 if (processes.Length == 0)
                 {
-                    System.Diagnostics.Debug.WriteLine("No running WindowsScreenLogger instances found");
+                    System.Diagnostics.Debug.WriteLine("No running WindowsActivityLogger instances found");
                     return true;
                 }
                 
-                System.Diagnostics.Debug.WriteLine($"Found {processes.Length} running WindowsScreenLogger instance(s)");
+                System.Diagnostics.Debug.WriteLine($"Found {processes.Length} running WindowsActivityLogger instance(s)");
                 
                 if (!quiet)
                 {

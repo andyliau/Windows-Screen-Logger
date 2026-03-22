@@ -1,7 +1,7 @@
 ﻿using Microsoft.Win32;
-using WindowsScreenLogger.Installation;
+using WindowsActivityLogger.Installation;
 
-namespace WindowsScreenLogger;
+namespace WindowsActivityLogger;
 
 public partial class SettingsForm : Form
 {

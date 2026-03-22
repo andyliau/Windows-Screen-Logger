@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
     internal static class NativeMethods
     {

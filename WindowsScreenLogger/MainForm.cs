@@ -2,11 +2,11 @@ using System.Diagnostics;
 using SkiaSharp;
 using System.Drawing.Imaging;
 using Microsoft.Win32;
-using WindowsScreenLogger.Installation;
-using WindowsScreenLogger.Services;
+using WindowsActivityLogger.Installation;
+using WindowsActivityLogger.Services;
 using Timer = System.Windows.Forms.Timer;
 
-namespace WindowsScreenLogger;
+namespace WindowsActivityLogger;
 
 public partial class MainForm : Form
 {

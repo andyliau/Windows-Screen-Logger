@@ -33,7 +33,7 @@
 		<!-- Assembly Information for Windows Apps -->
 		<AssemblyTitle>Windows Activity Logger</AssemblyTitle>
 		<AssemblyDescription>Windows activity logger with screen capture</AssemblyDescription>
-		<AssemblyCompany>WindowsScreenLogger</AssemblyCompany>
+		<AssemblyCompany>WindowsActivityLogger</AssemblyCompany>
 		<AssemblyProduct>Windows Activity Logger</AssemblyProduct>
 		<AssemblyCopyright>Copyright © 2024</AssemblyCopyright>
 		<AssemblyVersion>1.0.0.0</AssemblyVersion>
@@ -47,7 +47,7 @@
 
 	<ItemGroup>
 	  <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-	    <_Parameter1>WindowsScreenLogger.Tests</_Parameter1>
+	    <_Parameter1>WindowsActivityLogger.Tests</_Parameter1>
 	  </AssemblyAttribute>
 	</ItemGroup>
 

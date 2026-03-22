@@ -1,4 +1,4 @@
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
     /// <summary>
     /// Logger abstraction for dependency injection and testing

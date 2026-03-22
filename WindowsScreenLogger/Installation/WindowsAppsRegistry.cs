@@ -1,7 +1,7 @@
 using Microsoft.Win32;
 using System.Diagnostics;
 
-namespace WindowsScreenLogger.Installation
+namespace WindowsActivityLogger.Installation
 {
     /// <summary>
     /// Handles Windows Apps & Features registry operations

@@ -46,11 +46,11 @@ jobs:
           }
 
       - name: Run tests
-        run: dotnet test Tests/WindowsScreenLogger.Tests.csproj -c Release --logger "console;verbosity=normal"
+        run: dotnet test Tests/WindowsActivityLogger.Tests.csproj -c Release --logger "console;verbosity=normal"
 
-      - name: Publish WindowsScreenLogger
+      - name: Publish WindowsActivityLogger
         run: |
-          dotnet publish WindowsScreenLogger/WindowsScreenLogger.csproj `
+          dotnet publish WindowsActivityLogger/WindowsActivityLogger.csproj `
             -c Release `
             -p:Version=${{ steps.version.outputs.number }} `
             -o publish/app
