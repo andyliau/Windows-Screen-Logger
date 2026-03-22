@@ -52,16 +52,23 @@ public static class FriendlyNameResolver
     private static readonly Lazy<IReadOnlyDictionary<string, string>> UserOverrides =
         new(LoadUserOverrides);
 
+    private static readonly Dictionary<string, string?> ResolvedCache =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public static string? Resolve(string processName)
     {
+        if (ResolvedCache.TryGetValue(processName, out var cached))
+            return cached;
+
         if (UserOverrides.Value.TryGetValue(processName, out var user))
-            return user;
+            return ResolvedCache[processName] = user;
 
         var fromRegistry = LookupRegistry(processName);
         if (fromRegistry is not null)
-            return fromRegistry;
+            return ResolvedCache[processName] = fromRegistry;
 
-        return Hardcoded.TryGetValue(processName, out var hardcoded) ? hardcoded : null;
+        var hardcoded = Hardcoded.TryGetValue(processName, out var h) ? h : null;
+        return ResolvedCache[processName] = hardcoded;
     }
 
     private static string? LookupRegistry(string processName)
