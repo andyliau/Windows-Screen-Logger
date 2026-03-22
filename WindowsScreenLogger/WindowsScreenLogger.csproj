@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
@@ -31,10 +31,10 @@
 		<MetadataUpdaterSupport>false</MetadataUpdaterSupport>
 
 		<!-- Assembly Information for Windows Apps -->
-		<AssemblyTitle>Windows Screen Logger</AssemblyTitle>
-		<AssemblyDescription>Automated screen capture utility for Windows</AssemblyDescription>
+		<AssemblyTitle>Windows Activity Logger</AssemblyTitle>
+		<AssemblyDescription>Windows activity logger with screen capture</AssemblyDescription>
 		<AssemblyCompany>WindowsScreenLogger</AssemblyCompany>
-		<AssemblyProduct>Windows Screen Logger</AssemblyProduct>
+		<AssemblyProduct>Windows Activity Logger</AssemblyProduct>
 		<AssemblyCopyright>Copyright © 2024</AssemblyCopyright>
 		<AssemblyVersion>1.0.0.0</AssemblyVersion>
 		<FileVersion>1.0.0.0</FileVersion>

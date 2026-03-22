@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyTitle>Activity Log Processor</AssemblyTitle>
-    <AssemblyDescription>Pre-processor for WindowsScreenLogger activity log files</AssemblyDescription>
+    <AssemblyDescription>Pre-processor for Windows Activity Logger activity log files</AssemblyDescription>
   </PropertyGroup>
 
   <ItemGroup>

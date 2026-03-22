@@ -1,4 +1,4 @@
-# Windows Screen Logger
+# Windows Activity Logger
 
 A lightweight Windows background app that periodically captures screenshots and logs which applications you are using — so you can understand where your time goes each day.
 
@@ -54,8 +54,8 @@ Download the latest release and run `WindowsScreenLogger.exe`. The app minimises
 
 To build from source:
 ```bash
-git clone https://github.com/andyliau/Windows-Screen-Logger.git
-cd Windows-Screen-Logger
+git clone https://github.com/andyliau/Windows-Activity-Logger.git
+cd Windows-Activity-Logger
 dotnet build
 ```
 
