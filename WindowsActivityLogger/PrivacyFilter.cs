@@ -1,4 +1,4 @@
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
     /// <summary>
     /// Redacts window titles for processes that may display sensitive information

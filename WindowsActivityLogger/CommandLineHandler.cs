@@ -1,9 +1,9 @@
 using System.CommandLine;
 using System.Diagnostics;
 using System.Reflection;
-using WindowsScreenLogger.Installation;
+using WindowsActivityLogger.Installation;
 
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
     /// <summary>
     /// Enhanced command line argument handling using System.CommandLine
@@ -24,12 +24,12 @@ namespace WindowsScreenLogger
         /// </summary>
         public static RootCommand CreateRootCommand()
         {
-            var rootCommand = new RootCommand("Windows Screen Logger - Automated screen capture utility");
+            var rootCommand = new RootCommand("Windows Activity Logger - Automated screen capture and activity tracker");
 
             // Install command
-            var forceOption = new Option<bool>("--force", "Force installation even if already installed");
-            var silentOption = new Option<bool>("--silent", "Perform silent installation without user prompts");
-            var installCommand = new Command("install", "Install the application to the user's local folder");
+            var forceOption = new Option<bool>("--force") { Description = "Force installation even if already installed" };
+            var silentOption = new Option<bool>("--silent") { Description = "Perform silent installation without user prompts" };
+            var installCommand = new Command("install") { Description = "Install the application to the user's local folder" };
             installCommand.Options.Add(forceOption);
             installCommand.Options.Add(silentOption);
             installCommand.SetAction(ctx => HandleInstallCommand(
@@ -37,9 +37,9 @@ namespace WindowsScreenLogger
                 ctx.GetValue(silentOption)));
 
             // Uninstall command
-            var quietOption = new Option<bool>("--quiet", "Perform quiet uninstallation without user prompts");
-            var uninstallForceOption = new Option<bool>("--force", "Force uninstallation even if not properly installed");
-            var uninstallCommand = new Command("uninstall", "Uninstall the application");
+            var quietOption = new Option<bool>("--quiet") { Description = "Perform quiet uninstallation without user prompts" };
+            var uninstallForceOption = new Option<bool>("--force") { Description = "Force uninstallation even if not properly installed" };
+            var uninstallCommand = new Command("uninstall") { Description = "Uninstall the application" };
             uninstallCommand.Options.Add(quietOption);
             uninstallCommand.Options.Add(uninstallForceOption);
             uninstallCommand.SetAction(ctx => HandleUninstallCommand(
@@ -47,25 +47,25 @@ namespace WindowsScreenLogger
                 ctx.GetValue(uninstallForceOption)));
 
             // Status command
-            var statusCommand = new Command("status", "Show installation and application status");
+            var statusCommand = new Command("status") { Description = "Show installation and application status" };
             statusCommand.SetAction(_ => HandleStatusCommand());
 
             // Debug command for troubleshooting
-            var debugCommand = new Command("debug", "Show detailed debug information");
+            var debugCommand = new Command("debug") { Description = "Show detailed debug information" };
             debugCommand.SetAction(_ => HandleDebugCommand());
 
             // Test command for uninstall functionality
-            var testUninstallCommand = new Command("test-uninstall", "Test the uninstall process (dry run)");
+            var testUninstallCommand = new Command("test-uninstall") { Description = "Test the uninstall process (dry run)" };
             testUninstallCommand.SetAction(_ => HandleTestUninstallCommand());
 
             // Version command (alternative to --version)
-            var versionCommand = new Command("version", "Show version information");
+            var versionCommand = new Command("version") { Description = "Show version information" };
             versionCommand.SetAction(_ => HandleVersionCommand());
 
             // Run command (default behavior)
-            var noInstallPromptOption = new Option<bool>("--no-install-prompt", "Skip installation prompt on first run");
-            var configOption = new Option<string?>("--config", "Specify custom configuration file path");
-            var runCommand = new Command("run", "Run the application (default)");
+            var noInstallPromptOption = new Option<bool>("--no-install-prompt") { Description = "Skip installation prompt on first run" };
+            var configOption = new Option<string?>("--config") { Description = "Specify custom configuration file path" };
+            var runCommand = new Command("run") { Description = "Run the application (default)" };
             runCommand.Options.Add(noInstallPromptOption);
             runCommand.Options.Add(configOption);
             runCommand.SetAction(ctx => HandleRunCommand(
@@ -73,9 +73,9 @@ namespace WindowsScreenLogger
                 ctx.GetValue(configOption)));
 
             // Add global options (added to root command)
-            rootCommand.Options.Add(new Option<bool>("--verbose", "Enable verbose logging"));
-            rootCommand.Options.Add(new Option<bool>("--debug", "Enable debug mode"));
-            var postInstallOption = new Option<bool>("--post-install", "Internal flag for post-installation startup");
+            rootCommand.Options.Add(new Option<bool>("--verbose") { Description = "Enable verbose logging" });
+            rootCommand.Options.Add(new Option<bool>("--debug") { Description = "Enable debug mode" });
+            var postInstallOption = new Option<bool>("--post-install") { Description = "Internal flag for post-installation startup" };
             rootCommand.Options.Add(postInstallOption);
 
             // Add subcommands
@@ -277,8 +277,8 @@ namespace WindowsScreenLogger
                 var assembly = Assembly.GetExecutingAssembly();
                 var version = assembly.GetName().Version?.ToString() ?? "Unknown";
 
-                Console.WriteLine("Windows Screen Logger Status");
-                Console.WriteLine("============================");
+                Console.WriteLine("Windows Activity Logger Status");
+                Console.WriteLine("==============================");
                 Console.WriteLine($"Version: {version}");
                 Console.WriteLine($"Current Location: {Application.ExecutablePath}");
                 Console.WriteLine($"Installation Status: {SelfInstaller.GetInstallationStatus()}");
@@ -307,12 +307,12 @@ namespace WindowsScreenLogger
         {
             var assembly = Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version?.ToString() ?? "Unknown";
-            var fileVersion = FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion ?? "Unknown";
+            var fileVersion = assembly.GetCustomAttribute<System.Reflection.AssemblyFileVersionAttribute>()?.Version ?? "Unknown";
             
-            Console.WriteLine($"Windows Screen Logger v{version}");
+            Console.WriteLine($"Windows Activity Logger v{version}");
             Console.WriteLine($"File Version: {fileVersion}");
             Console.WriteLine($"Target Framework: .NET 9.0");
-            Console.WriteLine($"Copyright � 2024 WindowsScreenLogger");
+            Console.WriteLine($"Copyright \u00a9 2024 WindowsActivityLogger");
         }
 
         private static void HandleRunCommand(bool noInstallPrompt = false, string? configPath = null)
@@ -342,15 +342,15 @@ namespace WindowsScreenLogger
             // Set startup registry entry to installed location
             StartupRegistry.SetStartupRegistration(true, SelfInstaller.InstalledExecutablePath);
 
-            Console.WriteLine($"Windows Screen Logger installed successfully to: {SelfInstaller.InstallPath}");
+            Console.WriteLine($"Windows Activity Logger installed successfully to: {SelfInstaller.InstallPath}");
         }
 
         private static void HandleDebugCommand()
         {
             try
             {
-                Console.WriteLine("Windows Screen Logger - Debug Information");
-                Console.WriteLine("=========================================");
+                Console.WriteLine("Windows Activity Logger - Debug Information");
+                Console.WriteLine("===========================================");
                 
                 // Basic information
                 var assembly = Assembly.GetExecutingAssembly();
@@ -435,8 +435,8 @@ namespace WindowsScreenLogger
         {
             try
             {
-                Console.WriteLine("Windows Screen Logger - Uninstall Test");
-                Console.WriteLine("=====================================");
+                Console.WriteLine("Windows Activity Logger - Uninstall Test");
+                Console.WriteLine("=======================================");
                 
                 // Test installation detection
                 bool isInstalled = SelfInstaller.IsInstalled();
@@ -451,12 +451,12 @@ namespace WindowsScreenLogger
                 
                 // Test process detection
                 var currentProcess = Process.GetCurrentProcess();
-                var processes = Process.GetProcessesByName("WindowsScreenLogger")
+                var processes = Process.GetProcessesByName("WindowsActivityLogger")
                     .Where(p => p.Id != currentProcess.Id)
                     .ToArray();
                 
                 Console.WriteLine($"Current Process ID: {currentProcess.Id}");
-                Console.WriteLine($"Other WindowsScreenLogger processes found: {processes.Length}");
+                Console.WriteLine($"Other WindowsActivityLogger processes found: {processes.Length}");
                 
                 foreach (var process in processes)
                 {

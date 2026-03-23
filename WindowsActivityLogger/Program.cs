@@ -1,8 +1,8 @@
 using System.CommandLine;
 using System.Diagnostics;
-using WindowsScreenLogger.Installation;
+using WindowsActivityLogger.Installation;
 
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
 	internal static class Program
 	{
@@ -16,6 +16,10 @@ namespace WindowsScreenLogger
 		[STAThread]
 		static void Main(string[] args)
 		{
+			// Write startup trace to %TEMP%\WAL_startup.log before anything else.
+			// This always works regardless of config, for diagnosing launch failures.
+			WriteStartupTrace(args, "Main entered");
+
 			// Bootstrap logging before config is loaded
 			logger.Initialize(true, "Debug");
 			logger.LogCommandLineArgs(args);
@@ -44,6 +48,7 @@ namespace WindowsScreenLogger
 				}
 				catch (Exception ex)
 				{
+					WriteStartupTrace(args, $"EXCEPTION in command line processing: {ex}");
 					logger.LogException(ex, "Command line processing");
 					Environment.Exit(1);
 				}
@@ -59,24 +64,38 @@ namespace WindowsScreenLogger
 		/// </summary>
 		public static void StartNormalApplication(bool noInstallPrompt = false, string? configPath = null, bool isPostInstall = false)
 		{
+			WriteStartupTrace([], $"StartNormalApplication: noInstallPrompt={noInstallPrompt}, isPostInstall={isPostInstall}");
 			try
 			{
 				// Load configuration
 				appConfig = AppConfiguration.Load(configPath);
 				appConfig.Validate();
 
-				// Re-initialize logging with settings from config
-				logger.Initialize(appConfig.EnableLogging, appConfig.LogLevel);
+				// Always write to log file so startup and install events are always captured.
+				// (The 'enableLogging' config was gating file output; force it true here.)
+				logger.Initialize(true, appConfig.LogLevel);
 				logger.LogStartup();
 
 				// Clean up old logs
 				logger.CleanupOldLogs();
 
-				const string mutexName = "WindowsScreenLoggerMutex";
+				const string mutexName = "WindowsActivityLoggerMutex";
 
-				// Ensure only one instance is running
+				// Ensure only one instance is running.
+				// AbandonedMutexException means the previous owner exited via Environment.Exit
+				// without calling ReleaseMutex(); we still acquire ownership, so treat as success.
 				bool createdNew;
-				mutex = new Mutex(true, mutexName, out createdNew);
+				try
+				{
+					mutex = new Mutex(true, mutexName, out createdNew);
+				}
+				catch (AbandonedMutexException)
+				{
+					createdNew = true; // we acquired the abandoned mutex — proceed as owner
+				}
+
+				WriteStartupTrace([], $"Mutex: createdNew={createdNew}, isPostInstall={isPostInstall}");
+				logger.LogInformation($"Mutex attempt: createdNew={createdNew}, isPostInstall={isPostInstall}");
 
 				if (!createdNew)
 				{
@@ -91,7 +110,14 @@ namespace WindowsScreenLogger
 						{
 							Thread.Sleep(1000 * (i + 1)); // 1s, 2s, 3s, 4s, 5s
 							mutex?.Dispose();
-							mutex = new Mutex(true, mutexName, out createdNew);
+							try
+							{
+								mutex = new Mutex(true, mutexName, out createdNew);
+							}
+							catch (AbandonedMutexException)
+							{
+								createdNew = true;
+							}
 							
 							if (createdNew)
 							{
@@ -149,12 +175,13 @@ namespace WindowsScreenLogger
 
 				// Start the main form
 				logger.LogInformation("Starting main application form");
-				Application.Run(new MainForm(appConfig, logger: logger));
+				Application.Run(new MainForm(appConfig, logger: logger, postInstall: isPostInstall));
 
 				logger.LogShutdown();
 			}
 			catch (Exception ex)
 			{
+				WriteStartupTrace([], $"EXCEPTION in StartNormalApplication: {ex}");
 				logger.LogException(ex, "Application startup");
 				MessageBox.Show($"Fatal error during application startup: {ex.Message}", 
 					"Fatal Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -172,5 +199,36 @@ namespace WindowsScreenLogger
 		/// Gets the current application configuration
 		/// </summary>
 		public static AppConfiguration? GetConfiguration() => appConfig;
+
+		/// <summary>
+		/// Writes an entry to %TEMP%\WAL_startup.log regardless of logging config.
+		/// First place to look when diagnosing launch failures.
+		/// </summary>
+		internal static void WriteStartupTrace(string[] args, string message)
+		{
+			try
+			{
+				var logPath = Path.Combine(Path.GetTempPath(), "WAL_startup.log");
+				var argsStr = args.Length > 0 ? string.Join(" ", args) : "(none)";
+				var entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] PID={Environment.ProcessId} | args=[{argsStr}] | {message}";
+				File.AppendAllText(logPath, entry + Environment.NewLine);
+			}
+			catch { }
+		}
+
+		/// <summary>
+		/// Explicitly releases the named-mutex instance lock.
+		/// Called by SelfInstaller before launching the installed copy so the new
+		/// instance can acquire the mutex on first try (no AbandonedMutexException).
+		/// </summary>
+		public static void ReleaseInstanceLock()
+		{
+			if (mutex != null)
+			{
+				try { mutex.ReleaseMutex(); } catch { }
+				mutex.Dispose();
+				mutex = null;
+			}
+		}
 	}
 }

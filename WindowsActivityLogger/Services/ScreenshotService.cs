@@ -1,7 +1,7 @@
 using SkiaSharp;
 using System.Diagnostics;
 
-namespace WindowsScreenLogger.Services
+namespace WindowsActivityLogger.Services
 {
     /// <summary>
     /// Service responsible for capturing and saving screenshots
@@ -48,7 +48,7 @@ namespace WindowsScreenLogger.Services
 
                 // Resize with SkiaSharp using SKSamplingOptions
                 var samplingOptions = new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None);
-                SKImage image = null;
+                SKImage? image = null;
                 try
                 {
                     if (resizeNeeded)

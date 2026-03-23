@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
     /// <summary>
     /// Enhanced configuration management using System.Text.Json
@@ -77,7 +77,7 @@ namespace WindowsScreenLogger
         /// </summary>
         public static string DefaultConfigPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "WindowsScreenLogger",
+            "WindowsActivityLogger",
             "config.json");
 
         /// <summary>
@@ -208,7 +208,7 @@ namespace WindowsScreenLogger
             }
 
             // Default path
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "WindowsScreenLogger");
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "WindowsActivityLogger");
         }
     }
 }

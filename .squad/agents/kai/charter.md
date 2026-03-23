@@ -11,7 +11,7 @@
 
 ## What I Own
 
-- All production C# code under `WindowsScreenLogger/`
+- All production C# code under `WindowsActivityLogger/`
 - Services layer: `ScreenshotService`, `CleanupService`, `InstallationCommandService`
 - Windows integration: registry, system tray, session lock/unlock hooks
 - WinForms UI: `MainForm`, `SettingsForm`, `AppConfiguration`, `DefaultLogger`

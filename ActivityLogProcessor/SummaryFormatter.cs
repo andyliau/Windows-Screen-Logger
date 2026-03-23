@@ -61,25 +61,19 @@ public static class SummaryFormatter
 
     public static string FormatJson(ActivitySummary summary, string? dateLabel = null)
     {
-        var obj = new
-        {
-            date = dateLabel,
-            totalTrackedSeconds = (long)summary.TotalTracked.TotalSeconds,
-            byApplication = summary.ByApplication.Select(a => new
-            {
-                process = a.Process,
-                friendlyName = a.FriendlyName,
-                totalSeconds = (long)a.TotalDuration.TotalSeconds,
-            }),
-            topWindows = summary.TopWindows.Select(w => new
-            {
-                process = w.Process,
-                title = w.Title,
-                totalSeconds = (long)w.TotalDuration.TotalSeconds,
-            }),
-        };
+        var dto = new ActivitySummaryDto(
+            dateLabel,
+            (long)summary.TotalTracked.TotalSeconds,
+            summary.ByApplication.Select(a => new AppEntryDto(
+                a.Process,
+                a.FriendlyName,
+                (long)a.TotalDuration.TotalSeconds)),
+            summary.TopWindows.Select(w => new WindowEntryDto(
+                w.Process,
+                w.Title,
+                (long)w.TotalDuration.TotalSeconds)));
 
-        return JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(dto, JsonContext.Default.ActivitySummaryDto);
     }
 
     private static string FormatDuration(TimeSpan t)

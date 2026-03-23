@@ -2,31 +2,31 @@ using System.Diagnostics;
 using SkiaSharp;
 using System.Drawing.Imaging;
 using Microsoft.Win32;
-using WindowsScreenLogger.Installation;
-using WindowsScreenLogger.Services;
+using WindowsActivityLogger.Installation;
+using WindowsActivityLogger.Services;
 using Timer = System.Windows.Forms.Timer;
 
-namespace WindowsScreenLogger;
+namespace WindowsActivityLogger;
 
 public partial class MainForm : Form
 {
-	private Timer captureTimer;
-	private Timer clearTimer;
-	private Timer activityTimer;
+	private Timer captureTimer = null!;
+	private Timer clearTimer = null!;
+	private Timer activityTimer = null!;
 	private int captureInterval;
-	private ImageCodecInfo jpegEncoder;
 	private bool isSessionLocked;
 
-	private NotifyIcon notifyIcon;
-	private bool isRecording = false;
+	private NotifyIcon notifyIcon = null!;
+	private readonly bool _postInstall;
 	private readonly AppConfiguration config;
 	private readonly ILogger _logger;
 	private readonly ScreenshotService screenshotService;
 	private readonly CleanupService cleanupService;
 	private readonly ActivityLoggingService activityLoggingService;
 
-	public MainForm(AppConfiguration? configuration = null, ScreenshotService? screenshot = null, CleanupService? cleanup = null, ILogger? logger = null)
+	public MainForm(AppConfiguration? configuration = null, ScreenshotService? screenshot = null, CleanupService? cleanup = null, ILogger? logger = null, bool postInstall = false)
 	{
+		_postInstall = postInstall;
 		config = configuration ?? AppConfiguration.Load();
 		_logger = logger ?? CreateDefaultLogger(config);
 		screenshotService = screenshot ?? new ScreenshotService(config, _logger);
@@ -56,7 +56,7 @@ public partial class MainForm : Form
 		this.Hide();
 	}
 
-	private System.ComponentModel.IContainer components = null;
+	private System.ComponentModel.IContainer? components;
 	protected override void Dispose(bool disposing)
 	{
 		if (disposing)
@@ -82,12 +82,12 @@ public partial class MainForm : Form
 		notifyIcon = new NotifyIcon(components);
 		SuspendLayout();
 
-		Icon = (Icon)resources.GetObject("$this.Icon");
+		Icon = (Icon)resources.GetObject("$this.Icon")!;
 
 		// 
 		// notifyIcon
 		// 
-		notifyIcon.Text = "Screen Logger";
+		notifyIcon.Text = "Activity Logger";
 		notifyIcon.Icon = this.Icon;
 		notifyIcon.Visible = true;
 		notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
@@ -118,9 +118,18 @@ public partial class MainForm : Form
 		ResumeLayout(false);
 	}
 
-	private void MainForm_Load(object sender, EventArgs e)
+	private void MainForm_Load(object? sender, EventArgs e)
 	{
 		this.Hide();
+
+		if (_postInstall)
+		{
+			notifyIcon.ShowBalloonTip(
+				5000,
+				"Windows Activity Logger",
+				"Installation complete! The activity logger is now running.",
+				ToolTipIcon.Info);
+		}
 	}
 
 	private void Configure()
@@ -164,7 +173,7 @@ public partial class MainForm : Form
 		{
 			activityTimer.Start();
 			_logger.LogInformation($"Activity logging enabled — sampling every {sampleInterval}s. Log: {activityLoggingService.GetLogFilePath()}");
-			ShowActivityLoggingIntroIfNeeded();
+			//ShowActivityLoggingIntroIfNeeded();
 		}
 		else
 		{
@@ -173,33 +182,33 @@ public partial class MainForm : Form
 
 		// Reflect activity logging state in the tray tooltip
 		notifyIcon.Text = config.EnableActivityLogging
-			? "Screen Logger (activity logging on)"
-			: "Screen Logger";
+			? "Activity Logger (logging on)"
+			: "Activity Logger";
 	}
 
-	private void ShowActivityLoggingIntroIfNeeded()
-	{
-		if (config.ActivityLoggingIntroShown) return;
-		config.ActivityLoggingIntroShown = true;
-		config.Save();
-		Task.Delay(3000).ContinueWith(_ =>
-			notifyIcon.ShowBalloonTip(
-				8000,
-				"Activity Logging Active",
-				"Windows Screen Logger is tracking your active windows to help summarise your daily work.\n" +
-				"Logs are saved alongside your screenshots. Disable anytime in Settings → Activity Logging.",
-				ToolTipIcon.Info),
-			TaskScheduler.FromCurrentSynchronizationContext());
-	}
+	//private void ShowActivityLoggingIntroIfNeeded()
+	//{
+	//	if (config.ActivityLoggingIntroShown) return;
+	//	config.ActivityLoggingIntroShown = true;
+	//	config.Save();
+	//	Task.Delay(3000).ContinueWith(_ =>
+	//		notifyIcon.ShowBalloonTip(
+	//			8000,
+	//			"Activity Logging Active",
+	//			"Windows Activity Logger is tracking your active windows to help summarise your daily work.\n" +
+	//			"Logs are saved alongside your screenshots. Disable anytime in Settings → Activity Logging.",
+	//			ToolTipIcon.Info),
+	//		TaskScheduler.FromCurrentSynchronizationContext());
+	//}
 
-	private void ActivityTimer_Tick(object sender, EventArgs e)
+	private void ActivityTimer_Tick(object? sender, EventArgs e)
 	{
 		if (!isSessionLocked)
 			activityLoggingService.Sample();
 	}
 
 
-	private async void CaptureTimer_Tick(object sender, EventArgs e)
+	private async void CaptureTimer_Tick(object? sender, EventArgs e)
 	{
 		if (!isSessionLocked)
 		{
@@ -220,7 +229,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void ShowSettings(object sender, EventArgs e)
+	private void ShowSettings(object? sender, EventArgs e)
 	{
 		using var settingsForm = new SettingsForm(config);
 		settingsForm.Icon = this.Icon;
@@ -230,7 +239,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void OpenActivityLog(object sender, EventArgs e)
+	private void OpenActivityLog(object? sender, EventArgs e)
 	{
 		var logPath = activityLoggingService.GetLogFilePath();
 		if (File.Exists(logPath))
@@ -251,7 +260,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void OpenSaveFolder(object sender, EventArgs e)
+	private void OpenSaveFolder(object? sender, EventArgs e)
 	{
 		try
 		{
@@ -265,7 +274,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void Exit(object sender, EventArgs e)
+	private void Exit(object? sender, EventArgs e)
 	{
 		if (notifyIcon != null)
 		{
@@ -275,7 +284,7 @@ public partial class MainForm : Form
 		Application.Exit();
 	}
 
-	private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+	private void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
 	{
 		if (e.Mode == PowerModes.Suspend)
 		{
@@ -289,7 +298,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+	private void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)
 	{
 		if (e.Reason == SessionSwitchReason.SessionLock)
 		{
@@ -303,7 +312,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void NotifyIcon_DoubleClick(object sender, EventArgs e)
+	private void NotifyIcon_DoubleClick(object? sender, EventArgs e)
 	{
 		OpenSaveFolder(sender, e);
 	}
@@ -337,12 +346,12 @@ public partial class MainForm : Form
 		}
 
 		var result = MessageBox.Show(
-			"Are you sure you want to uninstall Windows Screen Logger?\n\n" +
+			"Are you sure you want to uninstall Windows Activity Logger?\n\n" +
 			"This will:\n" +
-			"� Remove the application from your system\n" +
-			"� Remove it from Windows Apps & Features\n" +
-			"� Disable startup with Windows\n" +
-			"� Keep your screenshot files\n\n" +
+			"- Remove the application from your system\n" +
+			"- Remove it from Windows Apps & Features\n" +
+			"- Disable startup with Windows\n" +
+			"- Keep your screenshot files\n\n" +
 			"Continue with uninstallation?",
 			"Confirm Uninstall",
 			MessageBoxButtons.YesNo,

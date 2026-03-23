@@ -1,4 +1,4 @@
-namespace WindowsScreenLogger.Services
+namespace WindowsActivityLogger.Services
 {
     /// <summary>
     /// Service responsible for cleaning up old screenshots

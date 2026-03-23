@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
     /// <summary>
     /// Default implementation of ILogger that matches the AppLogger functionality
@@ -183,9 +183,9 @@ namespace WindowsScreenLogger
             {
                 var assembly = System.Reflection.Assembly.GetExecutingAssembly();
                 var version = assembly.GetName().Version?.ToString() ?? "Unknown";
-                var location = assembly.Location;
+                var location = System.AppContext.BaseDirectory;
 
-                LogInformation("=== Windows Screen Logger Starting ===");
+                LogInformation("=== Windows Activity Logger Starting ===");
                 LogInformation($"Version: {version}");
                 LogInformation($"Location: {location}");
                 LogInformation($"Process ID: {Environment.ProcessId}");
@@ -204,7 +204,7 @@ namespace WindowsScreenLogger
 
         public void LogShutdown()
         {
-            LogInformation("=== Windows Screen Logger Shutting Down ===");
+            LogInformation("=== Windows Activity Logger Shutting Down ===");
         }
     }
 }

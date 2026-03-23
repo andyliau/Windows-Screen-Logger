@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
@@ -18,12 +18,10 @@
 		
 		<!-- Include native libraries in single file for self-extraction -->
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		
-		<!-- Optimize for Windows 11 -->
+		<!-- Optimize cold launch (auto-start on boot) -->
 		<PublishReadyToRun>true</PublishReadyToRun>
-		<PublishReadyToRunShowWarnings>true</PublishReadyToRunShowWarnings>
-		
+
 		<!-- Size optimizations without trimming -->
 		<DebuggerSupport>false</DebuggerSupport>
 		<EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
@@ -31,10 +29,10 @@
 		<MetadataUpdaterSupport>false</MetadataUpdaterSupport>
 
 		<!-- Assembly Information for Windows Apps -->
-		<AssemblyTitle>Windows Screen Logger</AssemblyTitle>
-		<AssemblyDescription>Automated screen capture utility for Windows</AssemblyDescription>
-		<AssemblyCompany>WindowsScreenLogger</AssemblyCompany>
-		<AssemblyProduct>Windows Screen Logger</AssemblyProduct>
+		<AssemblyTitle>Windows Activity Logger</AssemblyTitle>
+		<AssemblyDescription>Windows activity logger with screen capture</AssemblyDescription>
+		<AssemblyCompany>WindowsActivityLogger</AssemblyCompany>
+		<AssemblyProduct>Windows Activity Logger</AssemblyProduct>
 		<AssemblyCopyright>Copyright © 2024</AssemblyCopyright>
 		<AssemblyVersion>1.0.0.0</AssemblyVersion>
 		<FileVersion>1.0.0.0</FileVersion>
@@ -47,7 +45,7 @@
 
 	<ItemGroup>
 	  <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-	    <_Parameter1>WindowsScreenLogger.Tests</_Parameter1>
+	    <_Parameter1>WindowsActivityLogger.Tests</_Parameter1>
 	  </AssemblyAttribute>
 	</ItemGroup>
 
@@ -63,5 +61,26 @@
 		<EmbeddedResource Include="Installation\UninstallScript.bat" />
 		<EmbeddedResource Include="Installation\UninstallScript.ps1" />
 	</ItemGroup>
+
+	<!-- ActivityLogProcessor embedded so it can be extracted on install -->
+	<PropertyGroup>
+		<ActivityProcessorPublishDir>$(BaseIntermediateOutputPath)activity-processor</ActivityProcessorPublishDir>
+		<ActivityProcessorExe>$(ActivityProcessorPublishDir)\ActivityLogProcessor.exe</ActivityProcessorExe>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="$(ActivityProcessorExe)">
+			<LogicalName>ActivityLogProcessor.exe</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<!-- Publish ActivityLogProcessor before building so the binary can be embedded -->
+	<Target Name="PublishActivityLogProcessor" BeforeTargets="CoreCompile"
+	        Inputs="$(MSBuildThisFileDirectory).\..\ActivityLogProcessor\ActivityLogProcessor.csproj;$(MSBuildThisFileDirectory).\..\ActivityLogProcessor\**\*.cs"
+	        Outputs="$(ActivityProcessorExe)">
+		<MakeDir Directories="$(ActivityProcessorPublishDir)" />
+		<Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)..\ActivityLogProcessor\ActivityLogProcessor.csproj&quot; -c $(Configuration) -o &quot;$(ActivityProcessorPublishDir)&quot; --nologo -v quiet" />
+		<Message Text="ActivityLogProcessor published and embedded." Importance="high" />
+	</Target>
 
 </Project>

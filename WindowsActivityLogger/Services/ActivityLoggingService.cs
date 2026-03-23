@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace WindowsScreenLogger.Services
+namespace WindowsActivityLogger.Services
 {
     /// <summary>
     /// Samples the foreground window every 5 s and writes activity to a daily log file

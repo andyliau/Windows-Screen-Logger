@@ -2,14 +2,15 @@ using Microsoft.Win32;
 using System.Diagnostics;
 using System.Security.Principal;
 
-namespace WindowsScreenLogger.Installation
+namespace WindowsActivityLogger.Installation
 {
     public static class SelfInstaller
     {
-        private const string AppName = "Windows Screen Logger";
+        private const string AppName = "Windows Activity Logger";
 
         public static string InstallPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
-        public static string InstalledExecutablePath => Path.Combine(InstallPath, "WindowsScreenLogger.exe");
+        public static string InstalledExecutablePath => Path.Combine(InstallPath, "WindowsActivityLogger.exe");
+        public static string InstalledProcessorPath => Path.Combine(InstallPath, "ActivityLogProcessor.exe");
 
         public static bool IsRunningFromInstallLocation()
         {
@@ -36,11 +37,11 @@ namespace WindowsScreenLogger.Installation
                 "This application is running from a temporary location. " +
                 "Would you like to install it to your system?\n\n" +
                 "Installation will:\n" +
-                "� Copy the application to your user folder\n" +
-                "� Add it to Windows Apps & Features\n" +
-                "� Enable proper startup with Windows\n" +
-                "� Allow easy uninstallation\n" +
-                "� No administrator privileges required\n\n" +
+                "- Copy the application to your user folder\n" +
+                "- Add it to Windows Apps & Features\n" +
+                "- Enable proper startup with Windows\n" +
+                "- Allow easy uninstallation\n" +
+                "- No administrator privileges required\n\n" +
                 "The application will automatically restart from the installed location.\n\n" +
                 "Install now?",
                 "Install Application",
@@ -64,99 +65,134 @@ namespace WindowsScreenLogger.Installation
                 // Copy executable
                 File.Copy(Application.ExecutablePath, InstalledExecutablePath, true);
 
+                // Extract ActivityLogProcessor alongside main executable
+                ExtractEmbeddedBinary("ActivityLogProcessor.exe", InstalledProcessorPath);
+
+                // Remove any leftover traces from the old "Windows Screen Logger" name
+                CleanupLegacyInstallation();
+
                 // Register in Windows Apps & Features (user registry only)
                 WindowsAppsRegistry.RegisterApplication(InstallPath, InstalledExecutablePath);
 
                 // Set startup registry entry to installed location
                 StartupRegistry.SetStartupRegistration(true, InstalledExecutablePath);
 
-                // Use delayed start to avoid mutex conflict - no blocking dialogs
-                StartInstalledVersionWithDelay();
-                
-                // Simple, direct exit approach
-                Application.Exit();
-                
-                // Give a brief moment for graceful exit, then force if needed
-                Thread.Sleep(300);
+                // Confirm success before launching — user click also acts as a natural delay
+                // so the new instance rarely needs to retry the mutex.
+                MessageBox.Show(
+                    $"{AppName} has been installed successfully!\n\n" +
+                    "The application will now start and appear in your system tray.\n\n" +
+                    "Look for the Activity Logger icon in the notification area (bottom-right of taskbar).",
+                    "Installation Complete",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                // Release the mutex explicitly so the new instance can acquire it
+                // on its first attempt (avoids AbandonedMutexException from Environment.Exit).
+                Program.ReleaseInstanceLock();
+
+                // Start the installed copy, then exit.
+                StartInstalledVersion();
                 Environment.Exit(0);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Installation failed: {ex.Message}", 
+                MessageBox.Show($"Installation failed: {ex.Message}",
                     "Installation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         /// <summary>
-        /// Starts the installed version with a delay to ensure the current process has time to exit
+        /// Starts the installed executable. The --post-install flag triggers mutex retry logic
+        /// in Program.cs so the new instance waits gracefully for this process to exit.
+        /// UseShellExecute=true creates the process outside any Windows Job Object that
+        /// might otherwise kill child processes when the parent exits.
         /// </summary>
-        private static void StartInstalledVersionWithDelay()
+        private static void StartInstalledVersion()
         {
+            Program.WriteStartupTrace([], $"Launching installed copy: {InstalledExecutablePath}");
+            Process.Start(new ProcessStartInfo(InstalledExecutablePath, "--post-install")
+            {
+                UseShellExecute = true
+            });
+        }
+
+        /// <summary>
+        /// Removes leftover files and registry entries from the old "Windows Screen Logger" installation.
+        /// Safe to call even if nothing exists — all steps are best-effort.
+        /// </summary>
+        private static void CleanupLegacyInstallation()
+        {
+            // Old install directory
+            var oldInstallPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Windows Screen Logger");
+            if (Directory.Exists(oldInstallPath))
+            {
+                try { Directory.Delete(oldInstallPath, true); }
+                catch (Exception ex) { Debug.WriteLine($"Legacy cleanup: could not remove old install dir: {ex.Message}"); }
+            }
+
+            // Old AppData folder
+            var oldAppData = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "WindowsScreenLogger");
+            if (Directory.Exists(oldAppData))
+            {
+                try { Directory.Delete(oldAppData, true); }
+                catch (Exception ex) { Debug.WriteLine($"Legacy cleanup: could not remove old AppData: {ex.Message}"); }
+            }
+
+            // Old startup registry values (tried both naming conventions)
+            const string runKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
             try
             {
-                // Create a batch script that waits and then starts the installed version
-                string tempBatchFile = Path.Combine(Path.GetTempPath(), "start_installed_screenlogger.bat");
-                
-                string batchContent = $@"@echo off
-rem Wait for the current process to fully exit
-timeout /t 2 /nobreak >nul
-
-rem Verify the installed executable exists
-if not exist ""{InstalledExecutablePath}"" (
-    exit /b 1
-)
-
-rem Start the installed version with a special flag
-start """" ""{InstalledExecutablePath}"" --post-install
-
-rem Wait a moment to ensure the process starts
-timeout /t 1 /nobreak >nul
-
-rem Delete this batch file
-del ""%~f0"" >nul 2>&1
-";
-
-                File.WriteAllText(tempBatchFile, batchContent);
-                
-                // Start the batch file and let it handle the delayed execution
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = tempBatchFile,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                };
-                
-                Process.Start(startInfo);
+                using var runKey = Registry.CurrentUser.OpenSubKey(runKeyPath, true);
+                runKey?.DeleteValue("Windows Screen Logger", false);
+                runKey?.DeleteValue("WindowsScreenLogger", false);
             }
-            catch (Exception ex)
+            catch (Exception ex) { Debug.WriteLine($"Legacy cleanup: could not remove old startup entry: {ex.Message}"); }
+
+            // Old Windows Apps & Features registry entries — scan for any entry whose
+            // DisplayName was the old app name and remove it.
+            const string uninstallRoot = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+            try
             {
-                // Fallback: try direct start with special flag after a shorter delay
-                Debug.WriteLine($"Failed to create delayed start script: {ex.Message}");
-                try
+                using var uninstallKey = Registry.CurrentUser.OpenSubKey(uninstallRoot, true);
+                if (uninstallKey != null)
                 {
-                    // Use a background task for the fallback to avoid blocking
-                    Task.Run(async () =>
+                    foreach (var subKeyName in uninstallKey.GetSubKeyNames())
                     {
-                        await Task.Delay(1500); // Shorter delay for fallback
                         try
                         {
-                            Process.Start(new ProcessStartInfo(InstalledExecutablePath, "--post-install")
+                            using var sub = uninstallKey.OpenSubKey(subKeyName);
+                            var displayName = sub?.GetValue("DisplayName") as string;
+                            if (displayName != null &&
+                                (displayName.Equals("Windows Screen Logger", StringComparison.OrdinalIgnoreCase) ||
+                                 displayName.Equals("WindowsScreenLogger", StringComparison.OrdinalIgnoreCase)))
                             {
-                                UseShellExecute = true
-                            });
+                                sub?.Close();
+                                uninstallKey.DeleteSubKey(subKeyName, false);
+                                Debug.WriteLine($"Legacy cleanup: removed old Apps entry '{subKeyName}'");
+                            }
                         }
-                        catch (Exception fallbackEx)
-                        {
-                            Debug.WriteLine($"Fallback start also failed: {fallbackEx.Message}");
-                        }
-                    });
-                }
-                catch (Exception taskEx)
-                {
-                    Debug.WriteLine($"Failed to create fallback task: {taskEx.Message}");
+                        catch (Exception ex) { Debug.WriteLine($"Legacy cleanup: error checking subkey {subKeyName}: {ex.Message}"); }
+                    }
                 }
             }
+            catch (Exception ex) { Debug.WriteLine($"Legacy cleanup: could not scan uninstall registry: {ex.Message}"); }
+        }
+
+        private static void ExtractEmbeddedBinary(string resourceName, string destinationPath)
+        {
+            using var stream = typeof(SelfInstaller).Assembly.GetManifestResourceStream(resourceName);
+            if (stream == null)
+            {
+                Debug.WriteLine($"Embedded binary '{resourceName}' not found — skipping.");
+                return;
+            }
+            using var file = new FileStream(destinationPath, FileMode.Create, FileAccess.Write);
+            stream.CopyTo(file);
         }
 
         /// <summary>
@@ -168,29 +204,29 @@ del ""%~f0"" >nul 2>&1
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("Checking for running WindowsScreenLogger processes");
+                System.Diagnostics.Debug.WriteLine("Checking for running WindowsActivityLogger processes");
                 
                 // Get current process to avoid terminating ourselves if we're the uninstaller
                 var currentProcess = Process.GetCurrentProcess();
                 var currentProcessId = currentProcess.Id;
                 
-                // Find all WindowsScreenLogger processes
-                var processes = Process.GetProcessesByName("WindowsScreenLogger")
+                // Find all WindowsActivityLogger processes
+                var processes = Process.GetProcessesByName("WindowsActivityLogger")
                     .Where(p => p.Id != currentProcessId) // Don't terminate ourselves
                     .ToArray();
                 
                 if (processes.Length == 0)
                 {
-                    System.Diagnostics.Debug.WriteLine("No running WindowsScreenLogger instances found");
+                    System.Diagnostics.Debug.WriteLine("No running WindowsActivityLogger instances found");
                     return true;
                 }
                 
-                System.Diagnostics.Debug.WriteLine($"Found {processes.Length} running WindowsScreenLogger instance(s)");
+                System.Diagnostics.Debug.WriteLine($"Found {processes.Length} running WindowsActivityLogger instance(s)");
                 
                 if (!quiet)
                 {
                     var result = MessageBox.Show(
-                        $"Windows Screen Logger is currently running ({processes.Length} instance{(processes.Length > 1 ? "s" : "")}).\n\n" +
+                        $"Windows Activity Logger is currently running ({processes.Length} instance{(processes.Length > 1 ? "s" : "")}).\n\n" +
                         "The application needs to be closed before uninstalling.\n\n" +
                         "Do you want to close it now and continue with the uninstall?",
                         "Close Running Application",
@@ -426,7 +462,7 @@ del ""%~f0"" >nul 2>&1
             try
             {
                 // Clean up application data folder
-                var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WindowsScreenLogger");
+                var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WindowsActivityLogger");
                 if (Directory.Exists(appDataPath))
                 {
                     try

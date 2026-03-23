@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace WindowsScreenLogger.Tests
+namespace WindowsActivityLogger.Tests
 {
     public class BitmapMemoryTests
     {

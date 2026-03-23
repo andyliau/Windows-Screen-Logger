@@ -1,4 +1,4 @@
-namespace WindowsScreenLogger
+namespace WindowsActivityLogger
 {
     /// <summary>
     /// Maps process names to coarse activity categories that help an AI

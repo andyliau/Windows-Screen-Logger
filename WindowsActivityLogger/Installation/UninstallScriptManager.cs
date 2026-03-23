@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 
-namespace WindowsScreenLogger.Installation
+namespace WindowsActivityLogger.Installation
 {
     /// <summary>
     /// Manages uninstallation scripts for delayed deletion
@@ -60,7 +60,7 @@ namespace WindowsScreenLogger.Installation
         private static string GetEmbeddedScript(string scriptName)
         {
             var assembly = Assembly.GetExecutingAssembly();
-            string resourceName = $"WindowsScreenLogger.Installation.{scriptName}";
+            string resourceName = $"WindowsActivityLogger.Installation.{scriptName}";
             
             try
             {

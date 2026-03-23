@@ -1,4 +1,4 @@
-# Windows Screen Logger
+# Windows Activity Logger
 
 A lightweight Windows background app that periodically captures screenshots and logs which applications you are using — so you can understand where your time goes each day.
 
@@ -50,12 +50,12 @@ The log is designed to be fed into an AI for daily work summarisation. A lightwe
 
 ## Installation
 
-Download the latest release and run `WindowsScreenLogger.exe`. The app minimises to the system tray on first launch.
+Download the latest release and run `WindowsActivityLogger.exe`. The app minimises to the system tray on first launch.
 
 To build from source:
 ```bash
-git clone https://github.com/andyliau/Windows-Screen-Logger.git
-cd Windows-Screen-Logger
+git clone https://github.com/andyliau/Windows-Activity-Logger.git
+cd Windows-Activity-Logger
 dotnet build
 ```
 
@@ -71,7 +71,7 @@ dotnet build
 
 ## Configuration
 
-Settings are stored in `%APPDATA%\WindowsScreenLogger\config.json`.
+Settings are stored in `%APPDATA%\WindowsActivityLogger\config.json`.
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -90,7 +90,7 @@ Activity logging is enabled by default. On first launch a balloon notification c
 
 Activity logs are written to:
 ```
-%USERPROFILE%\WindowsScreenLogger\
+%USERPROFILE%\WindowsActivityLogger\
   2026-03-19\                   ← screenshots
     screenshot_090012.jpg
     screenshot_090017.jpg

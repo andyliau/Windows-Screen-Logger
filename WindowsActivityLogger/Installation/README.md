@@ -1,6 +1,6 @@
 # Installation Components
 
-This folder contains **ALL** installation-related functionality for the Windows Screen Logger application.
+This folder contains **ALL** installation-related functionality for the Windows Activity Logger application.
 
 ## Complete Files Structure
 
@@ -40,7 +40,7 @@ The installation system is completely organized into this dedicated folder:
 ### Complete Organization
 - ALL installation-related files are in this folder
 - Clean separation from core application logic
-- Dedicated namespace: `WindowsScreenLogger.Installation`
+- Dedicated namespace: `WindowsActivityLogger.Installation`
 
 ### Script Embedding
 - Scripts are embedded as resources in the executable

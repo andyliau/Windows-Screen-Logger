@@ -1,14 +1,14 @@
 using Microsoft.Win32;
 using System.Diagnostics;
 
-namespace WindowsScreenLogger.Installation
+namespace WindowsActivityLogger.Installation
 {
     /// <summary>
     /// Manages Windows startup registry entries
     /// </summary>
     public static class StartupRegistry
     {
-        private const string AppName = "Windows Screen Logger";
+        private const string AppName = "Windows Activity Logger";
         private const string RunKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
 
         /// <summary>
