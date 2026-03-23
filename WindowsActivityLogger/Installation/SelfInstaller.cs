@@ -102,8 +102,8 @@ namespace WindowsActivityLogger.Installation
             try
             {
                 // Create a batch script that waits and then starts the installed version
-                string tempBatchFile = Path.Combine(Path.GetTempPath(), "start_installed_screenlogger.bat");
-                
+                string tempBatchFile = Path.Combine(Path.GetTempPath(), "start_installed_activitylogger.bat");
+
                 string batchContent = $@"@echo off
 rem Wait for the current process to fully exit
 timeout /t 2 /nobreak >nul
@@ -113,56 +113,44 @@ if not exist ""{InstalledExecutablePath}"" (
     exit /b 1
 )
 
-rem Start the installed version with a special flag
+rem Start the installed version
 start """" ""{InstalledExecutablePath}"" --post-install
 
-rem Wait a moment to ensure the process starts
-timeout /t 1 /nobreak >nul
-
 rem Delete this batch file
-del ""%~f0"" >nul 2>&1
+(goto) 2>nul & del ""%~f0""
 ";
 
                 File.WriteAllText(tempBatchFile, batchContent);
-                
-                // Start the batch file and let it handle the delayed execution
-                var startInfo = new ProcessStartInfo
+
+                // Must invoke via cmd.exe — .bat files can't be launched with UseShellExecute=false directly
+                Process.Start(new ProcessStartInfo
                 {
-                    FileName = tempBatchFile,
+                    FileName = "cmd.exe",
+                    Arguments = $"/c \"{tempBatchFile}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WindowStyle = ProcessWindowStyle.Hidden
-                };
-                
-                Process.Start(startInfo);
+                });
             }
             catch (Exception ex)
             {
-                // Fallback: try direct start with special flag after a shorter delay
                 Debug.WriteLine($"Failed to create delayed start script: {ex.Message}");
-                try
+                // Fallback: schedule start via Task without depending on a batch file
+                Task.Run(async () =>
                 {
-                    // Use a background task for the fallback to avoid blocking
-                    Task.Run(async () =>
+                    await Task.Delay(2000);
+                    try
                     {
-                        await Task.Delay(1500); // Shorter delay for fallback
-                        try
+                        Process.Start(new ProcessStartInfo(InstalledExecutablePath, "--post-install")
                         {
-                            Process.Start(new ProcessStartInfo(InstalledExecutablePath, "--post-install")
-                            {
-                                UseShellExecute = true
-                            });
-                        }
-                        catch (Exception fallbackEx)
-                        {
-                            Debug.WriteLine($"Fallback start also failed: {fallbackEx.Message}");
-                        }
-                    });
-                }
-                catch (Exception taskEx)
-                {
-                    Debug.WriteLine($"Failed to create fallback task: {taskEx.Message}");
-                }
+                            UseShellExecute = true
+                        });
+                    }
+                    catch (Exception fallbackEx)
+                    {
+                        Debug.WriteLine($"Fallback start also failed: {fallbackEx.Message}");
+                    }
+                });
             }
         }
 
