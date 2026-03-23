@@ -27,9 +27,9 @@ namespace WindowsActivityLogger
             var rootCommand = new RootCommand("Windows Activity Logger - Automated screen capture and activity tracker");
 
             // Install command
-            var forceOption = new Option<bool>("--force", "Force installation even if already installed");
-            var silentOption = new Option<bool>("--silent", "Perform silent installation without user prompts");
-            var installCommand = new Command("install", "Install the application to the user's local folder");
+            var forceOption = new Option<bool>("--force") { Description = "Force installation even if already installed" };
+            var silentOption = new Option<bool>("--silent") { Description = "Perform silent installation without user prompts" };
+            var installCommand = new Command("install") { Description = "Install the application to the user's local folder" };
             installCommand.Options.Add(forceOption);
             installCommand.Options.Add(silentOption);
             installCommand.SetAction(ctx => HandleInstallCommand(
@@ -37,9 +37,9 @@ namespace WindowsActivityLogger
                 ctx.GetValue(silentOption)));
 
             // Uninstall command
-            var quietOption = new Option<bool>("--quiet", "Perform quiet uninstallation without user prompts");
-            var uninstallForceOption = new Option<bool>("--force", "Force uninstallation even if not properly installed");
-            var uninstallCommand = new Command("uninstall", "Uninstall the application");
+            var quietOption = new Option<bool>("--quiet") { Description = "Perform quiet uninstallation without user prompts" };
+            var uninstallForceOption = new Option<bool>("--force") { Description = "Force uninstallation even if not properly installed" };
+            var uninstallCommand = new Command("uninstall") { Description = "Uninstall the application" };
             uninstallCommand.Options.Add(quietOption);
             uninstallCommand.Options.Add(uninstallForceOption);
             uninstallCommand.SetAction(ctx => HandleUninstallCommand(
@@ -47,25 +47,25 @@ namespace WindowsActivityLogger
                 ctx.GetValue(uninstallForceOption)));
 
             // Status command
-            var statusCommand = new Command("status", "Show installation and application status");
+            var statusCommand = new Command("status") { Description = "Show installation and application status" };
             statusCommand.SetAction(_ => HandleStatusCommand());
 
             // Debug command for troubleshooting
-            var debugCommand = new Command("debug", "Show detailed debug information");
+            var debugCommand = new Command("debug") { Description = "Show detailed debug information" };
             debugCommand.SetAction(_ => HandleDebugCommand());
 
             // Test command for uninstall functionality
-            var testUninstallCommand = new Command("test-uninstall", "Test the uninstall process (dry run)");
+            var testUninstallCommand = new Command("test-uninstall") { Description = "Test the uninstall process (dry run)" };
             testUninstallCommand.SetAction(_ => HandleTestUninstallCommand());
 
             // Version command (alternative to --version)
-            var versionCommand = new Command("version", "Show version information");
+            var versionCommand = new Command("version") { Description = "Show version information" };
             versionCommand.SetAction(_ => HandleVersionCommand());
 
             // Run command (default behavior)
-            var noInstallPromptOption = new Option<bool>("--no-install-prompt", "Skip installation prompt on first run");
-            var configOption = new Option<string?>("--config", "Specify custom configuration file path");
-            var runCommand = new Command("run", "Run the application (default)");
+            var noInstallPromptOption = new Option<bool>("--no-install-prompt") { Description = "Skip installation prompt on first run" };
+            var configOption = new Option<string?>("--config") { Description = "Specify custom configuration file path" };
+            var runCommand = new Command("run") { Description = "Run the application (default)" };
             runCommand.Options.Add(noInstallPromptOption);
             runCommand.Options.Add(configOption);
             runCommand.SetAction(ctx => HandleRunCommand(
@@ -73,9 +73,9 @@ namespace WindowsActivityLogger
                 ctx.GetValue(configOption)));
 
             // Add global options (added to root command)
-            rootCommand.Options.Add(new Option<bool>("--verbose", "Enable verbose logging"));
-            rootCommand.Options.Add(new Option<bool>("--debug", "Enable debug mode"));
-            var postInstallOption = new Option<bool>("--post-install", "Internal flag for post-installation startup");
+            rootCommand.Options.Add(new Option<bool>("--verbose") { Description = "Enable verbose logging" });
+            rootCommand.Options.Add(new Option<bool>("--debug") { Description = "Enable debug mode" });
+            var postInstallOption = new Option<bool>("--post-install") { Description = "Internal flag for post-installation startup" };
             rootCommand.Options.Add(postInstallOption);
 
             // Add subcommands
