@@ -95,62 +95,23 @@ namespace WindowsActivityLogger.Installation
         }
 
         /// <summary>
-        /// Starts the installed version with a delay to ensure the current process has time to exit
+        /// Starts the installed version. The --post-install flag triggers mutex retry logic
+        /// in Program.cs so the new instance waits gracefully for this process to exit.
+        /// UseShellExecute=true ensures the new process is independent of any Windows Job Object
+        /// that might otherwise cause child processes to be killed when the parent exits.
         /// </summary>
         private static void StartInstalledVersionWithDelay()
         {
             try
             {
-                // Create a batch script that waits and then starts the installed version
-                string tempBatchFile = Path.Combine(Path.GetTempPath(), "start_installed_activitylogger.bat");
-
-                string batchContent = $@"@echo off
-rem Wait for the current process to fully exit
-timeout /t 2 /nobreak >nul
-
-rem Verify the installed executable exists
-if not exist ""{InstalledExecutablePath}"" (
-    exit /b 1
-)
-
-rem Start the installed version
-start """" ""{InstalledExecutablePath}"" --post-install
-
-rem Delete this batch file
-(goto) 2>nul & del ""%~f0""
-";
-
-                File.WriteAllText(tempBatchFile, batchContent);
-
-                // Must invoke via cmd.exe — .bat files can't be launched with UseShellExecute=false directly
-                Process.Start(new ProcessStartInfo
+                Process.Start(new ProcessStartInfo(InstalledExecutablePath, "--post-install")
                 {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c \"{tempBatchFile}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden
+                    UseShellExecute = true  // independent of parent job objects
                 });
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to create delayed start script: {ex.Message}");
-                // Fallback: schedule start via Task without depending on a batch file
-                Task.Run(async () =>
-                {
-                    await Task.Delay(2000);
-                    try
-                    {
-                        Process.Start(new ProcessStartInfo(InstalledExecutablePath, "--post-install")
-                        {
-                            UseShellExecute = true
-                        });
-                    }
-                    catch (Exception fallbackEx)
-                    {
-                        Debug.WriteLine($"Fallback start also failed: {fallbackEx.Message}");
-                    }
-                });
+                Debug.WriteLine($"Failed to start installed version: {ex.Message}");
             }
         }
 
