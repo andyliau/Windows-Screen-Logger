@@ -48,7 +48,7 @@ namespace WindowsActivityLogger.Services
 
                 // Resize with SkiaSharp using SKSamplingOptions
                 var samplingOptions = new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None);
-                SKImage image = null;
+                SKImage? image = null;
                 try
                 {
                     if (resizeNeeded)

@@ -10,15 +10,13 @@ namespace WindowsActivityLogger;
 
 public partial class MainForm : Form
 {
-	private Timer captureTimer;
-	private Timer clearTimer;
-	private Timer activityTimer;
+	private Timer captureTimer = null!;
+	private Timer clearTimer = null!;
+	private Timer activityTimer = null!;
 	private int captureInterval;
-	private ImageCodecInfo jpegEncoder;
 	private bool isSessionLocked;
 
-	private NotifyIcon notifyIcon;
-	private bool isRecording = false;
+	private NotifyIcon notifyIcon = null!;
 	private readonly AppConfiguration config;
 	private readonly ILogger _logger;
 	private readonly ScreenshotService screenshotService;
@@ -56,7 +54,7 @@ public partial class MainForm : Form
 		this.Hide();
 	}
 
-	private System.ComponentModel.IContainer components = null;
+	private System.ComponentModel.IContainer? components;
 	protected override void Dispose(bool disposing)
 	{
 		if (disposing)
@@ -82,7 +80,7 @@ public partial class MainForm : Form
 		notifyIcon = new NotifyIcon(components);
 		SuspendLayout();
 
-		Icon = (Icon)resources.GetObject("$this.Icon");
+		Icon = (Icon)resources.GetObject("$this.Icon")!;
 
 		// 
 		// notifyIcon
@@ -118,7 +116,7 @@ public partial class MainForm : Form
 		ResumeLayout(false);
 	}
 
-	private void MainForm_Load(object sender, EventArgs e)
+	private void MainForm_Load(object? sender, EventArgs e)
 	{
 		this.Hide();
 	}
@@ -192,14 +190,14 @@ public partial class MainForm : Form
 			TaskScheduler.FromCurrentSynchronizationContext());
 	}
 
-	private void ActivityTimer_Tick(object sender, EventArgs e)
+	private void ActivityTimer_Tick(object? sender, EventArgs e)
 	{
 		if (!isSessionLocked)
 			activityLoggingService.Sample();
 	}
 
 
-	private async void CaptureTimer_Tick(object sender, EventArgs e)
+	private async void CaptureTimer_Tick(object? sender, EventArgs e)
 	{
 		if (!isSessionLocked)
 		{
@@ -220,7 +218,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void ShowSettings(object sender, EventArgs e)
+	private void ShowSettings(object? sender, EventArgs e)
 	{
 		using var settingsForm = new SettingsForm(config);
 		settingsForm.Icon = this.Icon;
@@ -230,7 +228,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void OpenActivityLog(object sender, EventArgs e)
+	private void OpenActivityLog(object? sender, EventArgs e)
 	{
 		var logPath = activityLoggingService.GetLogFilePath();
 		if (File.Exists(logPath))
@@ -251,7 +249,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void OpenSaveFolder(object sender, EventArgs e)
+	private void OpenSaveFolder(object? sender, EventArgs e)
 	{
 		try
 		{
@@ -265,7 +263,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void Exit(object sender, EventArgs e)
+	private void Exit(object? sender, EventArgs e)
 	{
 		if (notifyIcon != null)
 		{
@@ -275,7 +273,7 @@ public partial class MainForm : Form
 		Application.Exit();
 	}
 
-	private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+	private void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
 	{
 		if (e.Mode == PowerModes.Suspend)
 		{
@@ -289,7 +287,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+	private void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)
 	{
 		if (e.Reason == SessionSwitchReason.SessionLock)
 		{
@@ -303,7 +301,7 @@ public partial class MainForm : Form
 		}
 	}
 
-	private void NotifyIcon_DoubleClick(object sender, EventArgs e)
+	private void NotifyIcon_DoubleClick(object? sender, EventArgs e)
 	{
 		OpenSaveFolder(sender, e);
 	}

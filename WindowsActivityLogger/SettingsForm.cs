@@ -269,26 +269,26 @@ public partial class SettingsForm : Form
 		this.PerformLayout();
 	}
 
-	private Label label1;
-	private NumericUpDown numericUpDownInterval;
-	private CheckBox checkBoxStartWithWindows;
-	private Label label2;
-	private NumericUpDown numericUpDownImageSize;
-	private Label label3;
-	private TrackBar trackBarQuality;
-	private Label labelClearDays;
-	private NumericUpDown numericUpDownClearDays;
-	private Label labelActivitySection;
-	private CheckBox checkBoxEnableActivityLogging;
-	private Label labelActivityInterval;
-	private NumericUpDown numericUpDownActivityInterval;
-	private Label labelSummaryOutputDir;
-	private TextBox textBoxSummaryOutputDir;
-	private Button buttonBrowseSummaryDir;
-	private Button buttonSave;
-	private Button buttonCancel;
+	private Label label1 = null!;
+	private NumericUpDown numericUpDownInterval = null!;
+	private CheckBox checkBoxStartWithWindows = null!;
+	private Label label2 = null!;
+	private NumericUpDown numericUpDownImageSize = null!;
+	private Label label3 = null!;
+	private TrackBar trackBarQuality = null!;
+	private Label labelClearDays = null!;
+	private NumericUpDown numericUpDownClearDays = null!;
+	private Label labelActivitySection = null!;
+	private CheckBox checkBoxEnableActivityLogging = null!;
+	private Label labelActivityInterval = null!;
+	private NumericUpDown numericUpDownActivityInterval = null!;
+	private Label labelSummaryOutputDir = null!;
+	private TextBox textBoxSummaryOutputDir = null!;
+	private Button buttonBrowseSummaryDir = null!;
+	private Button buttonSave = null!;
+	private Button buttonCancel = null!;
 
-	private void SettingsForm_Load(object sender, EventArgs e)
+	private void SettingsForm_Load(object? sender, EventArgs e)
 	{
 		numericUpDownInterval.Value = _config.CaptureInterval;
 		checkBoxStartWithWindows.Checked = GetStartup();
@@ -303,7 +303,7 @@ public partial class SettingsForm : Form
 			numericUpDownActivityInterval.Enabled = checkBoxEnableActivityLogging.Checked;
 	}
 
-	private void ButtonSave_Click(object sender, EventArgs e)
+	private void ButtonSave_Click(object? sender, EventArgs e)
 	{
 		_config.CaptureInterval = (int)numericUpDownInterval.Value;
 		_config.ImageSizePercentage = (int)numericUpDownImageSize.Value;
@@ -324,7 +324,7 @@ public partial class SettingsForm : Form
 		this.Close();
 	}
 
-	private void ButtonCancel_Click(object sender, EventArgs e)
+	private void ButtonCancel_Click(object? sender, EventArgs e)
 	{
 		this.DialogResult = DialogResult.Cancel;
 		this.Close();
@@ -341,7 +341,7 @@ public partial class SettingsForm : Form
 		return StartupRegistry.IsStartupEnabled();
 	}
 
-	private void ButtonBrowseSummaryDir_Click(object sender, EventArgs e)
+	private void ButtonBrowseSummaryDir_Click(object? sender, EventArgs e)
 	{
 		using var dialog = new FolderBrowserDialog
 		{
