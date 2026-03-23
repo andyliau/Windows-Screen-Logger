@@ -37,11 +37,11 @@ namespace WindowsActivityLogger.Installation
                 "This application is running from a temporary location. " +
                 "Would you like to install it to your system?\n\n" +
                 "Installation will:\n" +
-                "� Copy the application to your user folder\n" +
-                "� Add it to Windows Apps & Features\n" +
-                "� Enable proper startup with Windows\n" +
-                "� Allow easy uninstallation\n" +
-                "� No administrator privileges required\n\n" +
+                "- Copy the application to your user folder\n" +
+                "- Add it to Windows Apps & Features\n" +
+                "- Enable proper startup with Windows\n" +
+                "- Allow easy uninstallation\n" +
+                "- No administrator privileges required\n\n" +
                 "The application will automatically restart from the installed location.\n\n" +
                 "Install now?",
                 "Install Application",
@@ -67,6 +67,9 @@ namespace WindowsActivityLogger.Installation
 
                 // Extract ActivityLogProcessor alongside main executable
                 ExtractEmbeddedBinary("ActivityLogProcessor.exe", InstalledProcessorPath);
+
+                // Remove any leftover traces from the old "Windows Screen Logger" name
+                CleanupLegacyInstallation();
 
                 // Register in Windows Apps & Features (user registry only)
                 WindowsAppsRegistry.RegisterApplication(InstallPath, InstalledExecutablePath);
@@ -161,6 +164,72 @@ del ""%~f0"" >nul 2>&1
                     Debug.WriteLine($"Failed to create fallback task: {taskEx.Message}");
                 }
             }
+        }
+
+        /// <summary>
+        /// Removes leftover files and registry entries from the old "Windows Screen Logger" installation.
+        /// Safe to call even if nothing exists — all steps are best-effort.
+        /// </summary>
+        private static void CleanupLegacyInstallation()
+        {
+            // Old install directory
+            var oldInstallPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Windows Screen Logger");
+            if (Directory.Exists(oldInstallPath))
+            {
+                try { Directory.Delete(oldInstallPath, true); }
+                catch (Exception ex) { Debug.WriteLine($"Legacy cleanup: could not remove old install dir: {ex.Message}"); }
+            }
+
+            // Old AppData folder
+            var oldAppData = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "WindowsScreenLogger");
+            if (Directory.Exists(oldAppData))
+            {
+                try { Directory.Delete(oldAppData, true); }
+                catch (Exception ex) { Debug.WriteLine($"Legacy cleanup: could not remove old AppData: {ex.Message}"); }
+            }
+
+            // Old startup registry values (tried both naming conventions)
+            const string runKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+            try
+            {
+                using var runKey = Registry.CurrentUser.OpenSubKey(runKeyPath, true);
+                runKey?.DeleteValue("Windows Screen Logger", false);
+                runKey?.DeleteValue("WindowsScreenLogger", false);
+            }
+            catch (Exception ex) { Debug.WriteLine($"Legacy cleanup: could not remove old startup entry: {ex.Message}"); }
+
+            // Old Windows Apps & Features registry entries — scan for any entry whose
+            // DisplayName was the old app name and remove it.
+            const string uninstallRoot = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+            try
+            {
+                using var uninstallKey = Registry.CurrentUser.OpenSubKey(uninstallRoot, true);
+                if (uninstallKey != null)
+                {
+                    foreach (var subKeyName in uninstallKey.GetSubKeyNames())
+                    {
+                        try
+                        {
+                            using var sub = uninstallKey.OpenSubKey(subKeyName);
+                            var displayName = sub?.GetValue("DisplayName") as string;
+                            if (displayName != null &&
+                                (displayName.Equals("Windows Screen Logger", StringComparison.OrdinalIgnoreCase) ||
+                                 displayName.Equals("WindowsScreenLogger", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                sub?.Close();
+                                uninstallKey.DeleteSubKey(subKeyName, false);
+                                Debug.WriteLine($"Legacy cleanup: removed old Apps entry '{subKeyName}'");
+                            }
+                        }
+                        catch (Exception ex) { Debug.WriteLine($"Legacy cleanup: error checking subkey {subKeyName}: {ex.Message}"); }
+                    }
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine($"Legacy cleanup: could not scan uninstall registry: {ex.Message}"); }
         }
 
         private static void ExtractEmbeddedBinary(string resourceName, string destinationPath)
