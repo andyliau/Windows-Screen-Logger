@@ -307,7 +307,7 @@ namespace WindowsActivityLogger
         {
             var assembly = Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version?.ToString() ?? "Unknown";
-            var fileVersion = FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion ?? "Unknown";
+            var fileVersion = assembly.GetCustomAttribute<System.Reflection.AssemblyFileVersionAttribute>()?.Version ?? "Unknown";
             
             Console.WriteLine($"Windows Activity Logger v{version}");
             Console.WriteLine($"File Version: {fileVersion}");

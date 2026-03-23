@@ -18,11 +18,6 @@
 		
 		<!-- Include native libraries in single file for self-extraction -->
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-		
-		<!-- Optimize for Windows 11 -->
-		<PublishReadyToRun>true</PublishReadyToRun>
-		<PublishReadyToRunShowWarnings>true</PublishReadyToRunShowWarnings>
 		
 		<!-- Size optimizations without trimming -->
 		<DebuggerSupport>false</DebuggerSupport>

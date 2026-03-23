@@ -183,7 +183,7 @@ namespace WindowsActivityLogger
             {
                 var assembly = System.Reflection.Assembly.GetExecutingAssembly();
                 var version = assembly.GetName().Version?.ToString() ?? "Unknown";
-                var location = assembly.Location;
+                var location = System.AppContext.BaseDirectory;
 
                 LogInformation("=== Windows Activity Logger Starting ===");
                 LogInformation($"Version: {version}");
