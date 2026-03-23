@@ -87,7 +87,11 @@ namespace WindowsActivityLogger.Installation
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
 
-                // Start the installed copy, then exit immediately so the mutex is freed.
+                // Release the mutex explicitly so the new instance can acquire it
+                // on its first attempt (avoids AbandonedMutexException from Environment.Exit).
+                Program.ReleaseInstanceLock();
+
+                // Start the installed copy, then exit.
                 StartInstalledVersion();
                 Environment.Exit(0);
             }

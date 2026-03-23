@@ -74,9 +74,18 @@ namespace WindowsActivityLogger
 
 				const string mutexName = "WindowsActivityLoggerMutex";
 
-				// Ensure only one instance is running
+				// Ensure only one instance is running.
+				// AbandonedMutexException means the previous owner exited via Environment.Exit
+				// without calling ReleaseMutex(); we still acquire ownership, so treat as success.
 				bool createdNew;
-				mutex = new Mutex(true, mutexName, out createdNew);
+				try
+				{
+					mutex = new Mutex(true, mutexName, out createdNew);
+				}
+				catch (AbandonedMutexException)
+				{
+					createdNew = true; // we acquired the abandoned mutex — proceed as owner
+				}
 
 				if (!createdNew)
 				{
@@ -91,7 +100,14 @@ namespace WindowsActivityLogger
 						{
 							Thread.Sleep(1000 * (i + 1)); // 1s, 2s, 3s, 4s, 5s
 							mutex?.Dispose();
-							mutex = new Mutex(true, mutexName, out createdNew);
+							try
+							{
+								mutex = new Mutex(true, mutexName, out createdNew);
+							}
+							catch (AbandonedMutexException)
+							{
+								createdNew = true;
+							}
 							
 							if (createdNew)
 							{
@@ -172,5 +188,20 @@ namespace WindowsActivityLogger
 		/// Gets the current application configuration
 		/// </summary>
 		public static AppConfiguration? GetConfiguration() => appConfig;
+
+		/// <summary>
+		/// Explicitly releases the named-mutex instance lock.
+		/// Called by SelfInstaller before launching the installed copy so the new
+		/// instance can acquire the mutex on first try (no AbandonedMutexException).
+		/// </summary>
+		public static void ReleaseInstanceLock()
+		{
+			if (mutex != null)
+			{
+				try { mutex.ReleaseMutex(); } catch { }
+				mutex.Dispose();
+				mutex = null;
+			}
+		}
 	}
 }
