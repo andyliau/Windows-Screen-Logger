@@ -337,10 +337,10 @@ public partial class MainForm : Form
 		var result = MessageBox.Show(
 			"Are you sure you want to uninstall Windows Activity Logger?\n\n" +
 			"This will:\n" +
-			"� Remove the application from your system\n" +
-			"� Remove it from Windows Apps & Features\n" +
-			"� Disable startup with Windows\n" +
-			"� Keep your screenshot files\n\n" +
+			"- Remove the application from your system\n" +
+			"- Remove it from Windows Apps & Features\n" +
+			"- Disable startup with Windows\n" +
+			"- Keep your screenshot files\n\n" +
 			"Continue with uninstallation?",
 			"Confirm Uninstall",
 			MessageBoxButtons.YesNo,
