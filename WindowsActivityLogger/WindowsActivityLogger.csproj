@@ -64,4 +64,25 @@
 		<EmbeddedResource Include="Installation\UninstallScript.ps1" />
 	</ItemGroup>
 
+	<!-- ActivityLogProcessor embedded so it can be extracted on install -->
+	<PropertyGroup>
+		<ActivityProcessorPublishDir>$(BaseIntermediateOutputPath)activity-processor</ActivityProcessorPublishDir>
+		<ActivityProcessorExe>$(ActivityProcessorPublishDir)\ActivityLogProcessor.exe</ActivityProcessorExe>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="$(ActivityProcessorExe)">
+			<LogicalName>ActivityLogProcessor.exe</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<!-- Publish ActivityLogProcessor before building so the binary can be embedded -->
+	<Target Name="PublishActivityLogProcessor" BeforeTargets="CoreCompile"
+	        Inputs="$(MSBuildThisFileDirectory).\..\ActivityLogProcessor\ActivityLogProcessor.csproj;$(MSBuildThisFileDirectory).\..\ActivityLogProcessor\**\*.cs"
+	        Outputs="$(ActivityProcessorExe)">
+		<MakeDir Directories="$(ActivityProcessorPublishDir)" />
+		<Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)..\ActivityLogProcessor\ActivityLogProcessor.csproj&quot; -c $(Configuration) -o &quot;$(ActivityProcessorPublishDir)&quot; --nologo -v quiet" />
+		<Message Text="ActivityLogProcessor published and embedded." Importance="high" />
+	</Target>
+
 </Project>

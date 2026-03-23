@@ -10,6 +10,7 @@ namespace WindowsActivityLogger.Installation
 
         public static string InstallPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
         public static string InstalledExecutablePath => Path.Combine(InstallPath, "WindowsActivityLogger.exe");
+        public static string InstalledProcessorPath => Path.Combine(InstallPath, "ActivityLogProcessor.exe");
 
         public static bool IsRunningFromInstallLocation()
         {
@@ -63,6 +64,9 @@ namespace WindowsActivityLogger.Installation
 
                 // Copy executable
                 File.Copy(Application.ExecutablePath, InstalledExecutablePath, true);
+
+                // Extract ActivityLogProcessor alongside main executable
+                ExtractEmbeddedBinary("ActivityLogProcessor.exe", InstalledProcessorPath);
 
                 // Register in Windows Apps & Features (user registry only)
                 WindowsAppsRegistry.RegisterApplication(InstallPath, InstalledExecutablePath);
@@ -157,6 +161,18 @@ del ""%~f0"" >nul 2>&1
                     Debug.WriteLine($"Failed to create fallback task: {taskEx.Message}");
                 }
             }
+        }
+
+        private static void ExtractEmbeddedBinary(string resourceName, string destinationPath)
+        {
+            using var stream = typeof(SelfInstaller).Assembly.GetManifestResourceStream(resourceName);
+            if (stream == null)
+            {
+                Debug.WriteLine($"Embedded binary '{resourceName}' not found — skipping.");
+                return;
+            }
+            using var file = new FileStream(destinationPath, FileMode.Create, FileAccess.Write);
+            stream.CopyTo(file);
         }
 
         /// <summary>
