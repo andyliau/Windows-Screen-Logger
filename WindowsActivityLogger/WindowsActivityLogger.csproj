@@ -19,6 +19,9 @@
 		<!-- Include native libraries in single file for self-extraction -->
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 		
+		<!-- Optimize cold launch (auto-start on boot) -->
+		<PublishReadyToRun>true</PublishReadyToRun>
+
 		<!-- Size optimizations without trimming -->
 		<DebuggerSupport>false</DebuggerSupport>
 		<EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
