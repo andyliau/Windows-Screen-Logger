@@ -89,10 +89,6 @@ namespace WindowsActivityLogger.Services
             {
                 logger.LogException(ex, "Screen capture");
             }
-            finally
-            {
-                GC.Collect();
-            }
         }
 
         /// <summary>

@@ -14,7 +14,6 @@
 		<PublishSingleFile>true</PublishSingleFile>
 		<SelfContained>true</SelfContained>
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
-		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 		
 		<!-- Include native libraries in single file for self-extraction -->
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
@@ -56,6 +55,14 @@
 	  <PackageReference Include="System.CommandLine" Version="2.0.5" />
 	</ItemGroup>
 
+	<!-- Build-order dependency so ActivityLogProcessor is compiled before we publish it -->
+	<ItemGroup>
+	  <ProjectReference Include="..\ActivityLogProcessor\ActivityLogProcessor.csproj">
+	    <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+	    <Private>false</Private>
+	  </ProjectReference>
+	</ItemGroup>
+
 	<!-- Installation Scripts as Embedded Resources -->
 	<ItemGroup>
 		<EmbeddedResource Include="Installation\UninstallScript.bat" />
@@ -79,7 +86,7 @@
 	        Inputs="$(MSBuildThisFileDirectory).\..\ActivityLogProcessor\ActivityLogProcessor.csproj;$(MSBuildThisFileDirectory).\..\ActivityLogProcessor\**\*.cs"
 	        Outputs="$(ActivityProcessorExe)">
 		<MakeDir Directories="$(ActivityProcessorPublishDir)" />
-		<Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)..\ActivityLogProcessor\ActivityLogProcessor.csproj&quot; -c $(Configuration) -o &quot;$(ActivityProcessorPublishDir)&quot; --nologo -v quiet" />
+		<Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)..\ActivityLogProcessor\ActivityLogProcessor.csproj&quot; -c $(Configuration) -o &quot;$(ActivityProcessorPublishDir)&quot; --no-build --nologo -v quiet" />
 		<Message Text="ActivityLogProcessor published and embedded." Importance="high" />
 	</Target>
 
