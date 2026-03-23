@@ -55,14 +55,6 @@
 	  <PackageReference Include="System.CommandLine" Version="2.0.5" />
 	</ItemGroup>
 
-	<!-- Build-order dependency so ActivityLogProcessor is compiled before we publish it -->
-	<ItemGroup>
-	  <ProjectReference Include="..\ActivityLogProcessor\ActivityLogProcessor.csproj">
-	    <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-	    <Private>false</Private>
-	  </ProjectReference>
-	</ItemGroup>
-
 	<!-- Installation Scripts as Embedded Resources -->
 	<ItemGroup>
 		<EmbeddedResource Include="Installation\UninstallScript.bat" />
@@ -86,7 +78,9 @@
 	        Inputs="$(MSBuildThisFileDirectory).\..\ActivityLogProcessor\ActivityLogProcessor.csproj;$(MSBuildThisFileDirectory).\..\ActivityLogProcessor\**\*.cs"
 	        Outputs="$(ActivityProcessorExe)">
 		<MakeDir Directories="$(ActivityProcessorPublishDir)" />
-		<Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)..\ActivityLogProcessor\ActivityLogProcessor.csproj&quot; -c $(Configuration) -o &quot;$(ActivityProcessorPublishDir)&quot; --no-build --nologo -v quiet" />
+		<MSBuild Projects="$(MSBuildThisFileDirectory)..\ActivityLogProcessor\ActivityLogProcessor.csproj"
+		         Targets="Publish"
+		         Properties="Configuration=$(Configuration);PublishDir=$(MSBuildThisFileDirectory)$(ActivityProcessorPublishDir)\;RuntimeIdentifier=win-x64;SelfContained=true" />
 		<Message Text="ActivityLogProcessor published and embedded." Importance="high" />
 	</Target>
 
