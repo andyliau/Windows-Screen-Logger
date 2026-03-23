@@ -16,6 +16,10 @@ namespace WindowsActivityLogger
 		[STAThread]
 		static void Main(string[] args)
 		{
+			// Write startup trace to %TEMP%\WAL_startup.log before anything else.
+			// This always works regardless of config, for diagnosing launch failures.
+			WriteStartupTrace(args, "Main entered");
+
 			// Bootstrap logging before config is loaded
 			logger.Initialize(true, "Debug");
 			logger.LogCommandLineArgs(args);
@@ -65,8 +69,9 @@ namespace WindowsActivityLogger
 				appConfig = AppConfiguration.Load(configPath);
 				appConfig.Validate();
 
-				// Re-initialize logging with settings from config
-				logger.Initialize(appConfig.EnableLogging, appConfig.LogLevel);
+				// Always write to log file so startup and install events are always captured.
+				// (The 'enableLogging' config was gating file output; force it true here.)
+				logger.Initialize(true, appConfig.LogLevel);
 				logger.LogStartup();
 
 				// Clean up old logs
@@ -86,6 +91,9 @@ namespace WindowsActivityLogger
 				{
 					createdNew = true; // we acquired the abandoned mutex — proceed as owner
 				}
+
+				WriteStartupTrace([], $"Mutex: createdNew={createdNew}, isPostInstall={isPostInstall}");
+				logger.LogInformation($"Mutex attempt: createdNew={createdNew}, isPostInstall={isPostInstall}");
 
 				if (!createdNew)
 				{
@@ -188,6 +196,22 @@ namespace WindowsActivityLogger
 		/// Gets the current application configuration
 		/// </summary>
 		public static AppConfiguration? GetConfiguration() => appConfig;
+
+		/// <summary>
+		/// Writes an entry to %TEMP%\WAL_startup.log regardless of logging config.
+		/// First place to look when diagnosing launch failures.
+		/// </summary>
+		internal static void WriteStartupTrace(string[] args, string message)
+		{
+			try
+			{
+				var logPath = Path.Combine(Path.GetTempPath(), "WAL_startup.log");
+				var argsStr = args.Length > 0 ? string.Join(" ", args) : "(none)";
+				var entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] PID={Environment.ProcessId} | args=[{argsStr}] | {message}";
+				File.AppendAllText(logPath, entry + Environment.NewLine);
+			}
+			catch { }
+		}
 
 		/// <summary>
 		/// Explicitly releases the named-mutex instance lock.

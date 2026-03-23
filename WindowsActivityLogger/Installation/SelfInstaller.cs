@@ -110,6 +110,7 @@ namespace WindowsActivityLogger.Installation
         /// </summary>
         private static void StartInstalledVersion()
         {
+            Program.WriteStartupTrace([], $"Launching installed copy: {InstalledExecutablePath}");
             Process.Start(new ProcessStartInfo(InstalledExecutablePath, "--post-install")
             {
                 UseShellExecute = true
