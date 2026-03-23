@@ -48,6 +48,7 @@ namespace WindowsActivityLogger
 				}
 				catch (Exception ex)
 				{
+					WriteStartupTrace(args, $"EXCEPTION in command line processing: {ex}");
 					logger.LogException(ex, "Command line processing");
 					Environment.Exit(1);
 				}
@@ -63,6 +64,7 @@ namespace WindowsActivityLogger
 		/// </summary>
 		public static void StartNormalApplication(bool noInstallPrompt = false, string? configPath = null, bool isPostInstall = false)
 		{
+			WriteStartupTrace([], $"StartNormalApplication: noInstallPrompt={noInstallPrompt}, isPostInstall={isPostInstall}");
 			try
 			{
 				// Load configuration
@@ -179,6 +181,7 @@ namespace WindowsActivityLogger
 			}
 			catch (Exception ex)
 			{
+				WriteStartupTrace([], $"EXCEPTION in StartNormalApplication: {ex}");
 				logger.LogException(ex, "Application startup");
 				MessageBox.Show($"Fatal error during application startup: {ex.Message}", 
 					"Fatal Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
