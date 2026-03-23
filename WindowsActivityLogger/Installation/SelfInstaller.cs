@@ -190,7 +190,7 @@ del ""%~f0"" >nul 2>&1
                 if (!quiet)
                 {
                     var result = MessageBox.Show(
-                        $"Windows Screen Logger is currently running ({processes.Length} instance{(processes.Length > 1 ? "s" : "")}).\n\n" +
+                        $"Windows Activity Logger is currently running ({processes.Length} instance{(processes.Length > 1 ? "s" : "")}).\n\n" +
                         "The application needs to be closed before uninstalling.\n\n" +
                         "Do you want to close it now and continue with the uninstall?",
                         "Close Running Application",
