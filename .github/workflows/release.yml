@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number (e.g. 1.0.0) — no leading v'
+        description: 'Version number (e.g. 2.0.0) — no leading v'
         required: true
-        default: '0.0.0-test'
+        default: '2.0.0-test'
       create_release:
         description: 'Create a GitHub Release? (false = build/test only)'
         required: true
