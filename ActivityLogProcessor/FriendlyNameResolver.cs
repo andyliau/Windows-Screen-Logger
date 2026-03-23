@@ -107,8 +107,8 @@ public static class FriendlyNameResolver
         try
         {
             var json = File.ReadAllText(path);
-            var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json,
-                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var dict = System.Text.Json.JsonSerializer.Deserialize(json,
+                JsonContext.Default.DictionaryStringString);
             return dict ?? new Dictionary<string, string>();
         }
         catch

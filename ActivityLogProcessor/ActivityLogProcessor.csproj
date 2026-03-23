@@ -5,6 +5,8 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <PublishAot>true</PublishAot>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <AssemblyTitle>Activity Log Processor</AssemblyTitle>
     <AssemblyDescription>Pre-processor for Windows Activity Logger activity log files</AssemblyDescription>
   </PropertyGroup>

@@ -1,6 +1,6 @@
 # Installation Components
 
-This folder contains **ALL** installation-related functionality for the Windows Screen Logger application.
+This folder contains **ALL** installation-related functionality for the Windows Activity Logger application.
 
 ## Complete Files Structure
 
