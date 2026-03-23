@@ -149,7 +149,7 @@ namespace WindowsActivityLogger
 
 				// Start the main form
 				logger.LogInformation("Starting main application form");
-				Application.Run(new MainForm(appConfig, logger: logger));
+				Application.Run(new MainForm(appConfig, logger: logger, postInstall: isPostInstall));
 
 				logger.LogShutdown();
 			}

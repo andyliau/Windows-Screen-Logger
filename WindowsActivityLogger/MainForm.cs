@@ -17,14 +17,16 @@ public partial class MainForm : Form
 	private bool isSessionLocked;
 
 	private NotifyIcon notifyIcon = null!;
+	private readonly bool _postInstall;
 	private readonly AppConfiguration config;
 	private readonly ILogger _logger;
 	private readonly ScreenshotService screenshotService;
 	private readonly CleanupService cleanupService;
 	private readonly ActivityLoggingService activityLoggingService;
 
-	public MainForm(AppConfiguration? configuration = null, ScreenshotService? screenshot = null, CleanupService? cleanup = null, ILogger? logger = null)
+	public MainForm(AppConfiguration? configuration = null, ScreenshotService? screenshot = null, CleanupService? cleanup = null, ILogger? logger = null, bool postInstall = false)
 	{
+		_postInstall = postInstall;
 		config = configuration ?? AppConfiguration.Load();
 		_logger = logger ?? CreateDefaultLogger(config);
 		screenshotService = screenshot ?? new ScreenshotService(config, _logger);
@@ -119,6 +121,15 @@ public partial class MainForm : Form
 	private void MainForm_Load(object? sender, EventArgs e)
 	{
 		this.Hide();
+
+		if (_postInstall)
+		{
+			notifyIcon.ShowBalloonTip(
+				5000,
+				"Windows Activity Logger",
+				"Installation complete! The activity logger is now running.",
+				ToolTipIcon.Info);
+		}
 	}
 
 	private void Configure()

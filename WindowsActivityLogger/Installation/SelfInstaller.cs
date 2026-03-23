@@ -77,42 +77,39 @@ namespace WindowsActivityLogger.Installation
                 // Set startup registry entry to installed location
                 StartupRegistry.SetStartupRegistration(true, InstalledExecutablePath);
 
-                // Use delayed start to avoid mutex conflict - no blocking dialogs
-                StartInstalledVersionWithDelay();
-                
-                // Simple, direct exit approach
-                Application.Exit();
-                
-                // Give a brief moment for graceful exit, then force if needed
-                Thread.Sleep(300);
+                // Confirm success before launching — user click also acts as a natural delay
+                // so the new instance rarely needs to retry the mutex.
+                MessageBox.Show(
+                    $"{AppName} has been installed successfully!\n\n" +
+                    "The application will now start and appear in your system tray.\n\n" +
+                    "Look for the Activity Logger icon in the notification area (bottom-right of taskbar).",
+                    "Installation Complete",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                // Start the installed copy, then exit immediately so the mutex is freed.
+                StartInstalledVersion();
                 Environment.Exit(0);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Installation failed: {ex.Message}", 
+                MessageBox.Show($"Installation failed: {ex.Message}",
                     "Installation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         /// <summary>
-        /// Starts the installed version. The --post-install flag triggers mutex retry logic
+        /// Starts the installed executable. The --post-install flag triggers mutex retry logic
         /// in Program.cs so the new instance waits gracefully for this process to exit.
-        /// UseShellExecute=true ensures the new process is independent of any Windows Job Object
-        /// that might otherwise cause child processes to be killed when the parent exits.
+        /// UseShellExecute=true creates the process outside any Windows Job Object that
+        /// might otherwise kill child processes when the parent exits.
         /// </summary>
-        private static void StartInstalledVersionWithDelay()
+        private static void StartInstalledVersion()
         {
-            try
+            Process.Start(new ProcessStartInfo(InstalledExecutablePath, "--post-install")
             {
-                Process.Start(new ProcessStartInfo(InstalledExecutablePath, "--post-install")
-                {
-                    UseShellExecute = true  // independent of parent job objects
-                });
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Failed to start installed version: {ex.Message}");
-            }
+                UseShellExecute = true
+            });
         }
 
         /// <summary>
