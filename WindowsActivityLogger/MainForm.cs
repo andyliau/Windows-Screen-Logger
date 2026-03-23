@@ -173,7 +173,7 @@ public partial class MainForm : Form
 		{
 			activityTimer.Start();
 			_logger.LogInformation($"Activity logging enabled — sampling every {sampleInterval}s. Log: {activityLoggingService.GetLogFilePath()}");
-			ShowActivityLoggingIntroIfNeeded();
+			//ShowActivityLoggingIntroIfNeeded();
 		}
 		else
 		{
@@ -186,20 +186,20 @@ public partial class MainForm : Form
 			: "Activity Logger";
 	}
 
-	private void ShowActivityLoggingIntroIfNeeded()
-	{
-		if (config.ActivityLoggingIntroShown) return;
-		config.ActivityLoggingIntroShown = true;
-		config.Save();
-		Task.Delay(3000).ContinueWith(_ =>
-			notifyIcon.ShowBalloonTip(
-				8000,
-				"Activity Logging Active",
-				"Windows Activity Logger is tracking your active windows to help summarise your daily work.\n" +
-				"Logs are saved alongside your screenshots. Disable anytime in Settings → Activity Logging.",
-				ToolTipIcon.Info),
-			TaskScheduler.FromCurrentSynchronizationContext());
-	}
+	//private void ShowActivityLoggingIntroIfNeeded()
+	//{
+	//	if (config.ActivityLoggingIntroShown) return;
+	//	config.ActivityLoggingIntroShown = true;
+	//	config.Save();
+	//	Task.Delay(3000).ContinueWith(_ =>
+	//		notifyIcon.ShowBalloonTip(
+	//			8000,
+	//			"Activity Logging Active",
+	//			"Windows Activity Logger is tracking your active windows to help summarise your daily work.\n" +
+	//			"Logs are saved alongside your screenshots. Disable anytime in Settings → Activity Logging.",
+	//			ToolTipIcon.Info),
+	//		TaskScheduler.FromCurrentSynchronizationContext());
+	//}
 
 	private void ActivityTimer_Tick(object? sender, EventArgs e)
 	{
