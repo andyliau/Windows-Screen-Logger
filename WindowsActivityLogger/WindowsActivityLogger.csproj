@@ -80,7 +80,7 @@
 		<MakeDir Directories="$(ActivityProcessorPublishDir)" />
 		<MSBuild Projects="$(MSBuildThisFileDirectory)..\ActivityLogProcessor\ActivityLogProcessor.csproj"
 		         Targets="Publish"
-		         Properties="Configuration=$(Configuration);PublishDir=$(MSBuildThisFileDirectory)$(ActivityProcessorPublishDir)\;RuntimeIdentifier=win-x64;SelfContained=true" />
+		         Properties="Configuration=$(Configuration);PublishDir=$(MSBuildThisFileDirectory)$(ActivityProcessorPublishDir)\;RuntimeIdentifier=win-x64;SelfContained=true;PublishSingleFile=true" />
 		<Message Text="ActivityLogProcessor published and embedded." Importance="high" />
 	</Target>
 

@@ -59,6 +59,42 @@ public static class SummaryFormatter
         return sb.ToString();
     }
 
+    public static string FormatMarkdown(ActivitySummary summary, string? dateLabel = null)
+    {
+        var sb = new StringBuilder();
+        var label = dateLabel ?? "Activity Summary";
+
+        sb.AppendLine($"# Activity Summary — {label}");
+        sb.AppendLine();
+
+        sb.AppendLine("## By Application");
+        sb.AppendLine();
+        sb.AppendLine("| Application | Friendly Name | Total Time |");
+        sb.AppendLine("|-------------|---------------|------------|");
+        foreach (var app in summary.ByApplication)
+        {
+            var duration = FormatDuration(app.TotalDuration);
+            var friendly = app.FriendlyName ?? string.Empty;
+            sb.AppendLine($"| {app.Process} | {friendly} | {duration} |");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Top Windows");
+        sb.AppendLine();
+        sb.AppendLine("| Application | Window Title | Duration |");
+        sb.AppendLine("|-------------|--------------|----------|");
+        foreach (var w in summary.TopWindows)
+        {
+            var mins = FormatMinutes(w.TotalDuration);
+            sb.AppendLine($"| {w.Process} | {EscapeMarkdown(w.Title)} | {mins} |");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine($"**Total tracked:** {FormatDuration(summary.TotalTracked)}");
+
+        return sb.ToString();
+    }
+
     public static string FormatJson(ActivitySummary summary, string? dateLabel = null)
     {
         var dto = new ActivitySummaryDto(
@@ -75,6 +111,8 @@ public static class SummaryFormatter
 
         return JsonSerializer.Serialize(dto, JsonContext.Default.ActivitySummaryDto);
     }
+
+    private static string EscapeMarkdown(string text) => text.Replace("|", "\\|");
 
     private static string FormatDuration(TimeSpan t)
         => $"{(int)t.TotalHours}h {t.Minutes:D2}m";

@@ -26,8 +26,7 @@ public static class ActivitySummariser
 {
     public static ActivitySummary Summarise(
         IReadOnlyList<ActivityEntry> entries,
-        int sampleIntervalSeconds = 5,
-        int minTimelineSeconds = 60)
+        int sampleIntervalSeconds = 5)
     {
         var byApp = new Dictionary<string, TimeSpan>(StringComparer.OrdinalIgnoreCase);
         var byWindow = new Dictionary<(string Process, string Title), TimeSpan>();
@@ -64,7 +63,6 @@ public static class ActivitySummariser
                 e.Window.Process,
                 e.Window.Title,
                 TimeSpan.FromSeconds((e.DotCount + 1) * sampleIntervalSeconds)))
-            .Where(t => t.Duration.TotalSeconds >= minTimelineSeconds)
             .ToList();
 
         var total = byApp.Values.Aggregate(TimeSpan.Zero, (acc, d) => acc + d);
