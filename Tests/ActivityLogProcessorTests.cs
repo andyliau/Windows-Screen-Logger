@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using ActivityLogProcessor;
 using Xunit;
@@ -246,33 +247,31 @@ public class ActivitySummariserTests
     }
 
     [Fact]
-    public void Summarise_Timeline_FiltersEntriesBelowMinDuration()
+    public void Summarise_Timeline_ContainsAllEntries()
     {
         var entries = new[]
         {
-            MakeEntry("code",   "FileA", 11), // 12 × 5s = 60s — at threshold, included
-            MakeEntry("chrome", "Quick",  0), //  1 × 5s =  5s — below threshold, excluded
-            MakeEntry("code",   "FileB", 23), // 24 × 5s = 120s — included
+            MakeEntry("code",   "FileA", 11),
+            MakeEntry("chrome", "Quick",  0),
+            MakeEntry("code",   "FileB", 23),
         };
-        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5, minTimelineSeconds: 60);
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5);
 
-        Assert.Equal(2, summary.Timeline.Count);
-        Assert.DoesNotContain(summary.Timeline, t => t.Title == "Quick");
+        Assert.Equal(3, summary.Timeline.Count);
     }
 
     [Fact]
-    public void Summarise_Timeline_TotalsIncludeFilteredEntries()
+    public void Summarise_Timeline_TotalsIncludeAllEntries()
     {
-        // Short entries are hidden from the timeline but still count toward totals.
         var entries = new[]
         {
-            MakeEntry("code",   "FileA",  0), //  5s — filtered from timeline
-            MakeEntry("chrome", "GitHub", 11), // 60s — shown in timeline
+            MakeEntry("code",   "FileA",  0), //  5s
+            MakeEntry("chrome", "GitHub", 11), // 60s
         };
-        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5, minTimelineSeconds: 60);
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5);
 
-        Assert.Single(summary.Timeline);
-        Assert.Equal(2, summary.ByApplication.Count); // code still counted
+        Assert.Equal(2, summary.Timeline.Count);
+        Assert.Equal(2, summary.ByApplication.Count);
         Assert.Equal(TimeSpan.FromSeconds(65), summary.TotalTracked);
     }
 
@@ -285,7 +284,7 @@ public class ActivitySummariserTests
             new ActivityEntry(new WindowRecord(new TimeSpan(9, 30, 0), "chrome", "GitHub"),  3),
             new ActivityEntry(new WindowRecord(new TimeSpan(9, 40, 0), "teams",  "Standup"), 7),
         };
-        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60, minTimelineSeconds: 0);
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60);
 
         Assert.Equal(3, summary.Timeline.Count);
         Assert.Equal(new TimeSpan(9,  0, 0), summary.Timeline[0].Timestamp);
@@ -329,8 +328,7 @@ public class SampleOutputTests
     public void FullPipeline_TimelineOutput_ShowsChronologicalFlowAndRollup()
     {
         var entries = LogParser.Parse(SampleLog);
-        // minTimelineSeconds: 0 so all entries appear (all are well above 60s anyway)
-        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60, minTimelineSeconds: 0);
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60);
         var text = SummaryFormatter.FormatTimeline(summary, "2024-03-20");
 
         // Header
@@ -418,5 +416,139 @@ public class SampleOutputTests
 
         Assert.Equal("auth.ts — VS Code", topWindows[0].GetProperty("title").GetString());
         Assert.Equal(1800L,               topWindows[0].GetProperty("totalSeconds").GetInt64()); // 30 min
+    }
+
+    [Fact]
+    public void FullPipeline_MarkdownOutput_HasExpectedHeadingsAndTables()
+    {
+        var entries = LogParser.Parse(SampleLog);
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60);
+        var md = SummaryFormatter.FormatMarkdown(summary, "2024-03-20");
+
+        Assert.Contains("# Activity Summary — 2024-03-20", md);
+
+        Assert.Contains("## By Application", md);
+        Assert.Contains("| Application | Friendly Name | Total Time |", md);
+        Assert.Contains("| code | Visual Studio Code | 0h 50m |", md);
+        Assert.Contains("| chrome | Google Chrome | 0h 15m |", md);
+        Assert.Contains("| teams | Microsoft Teams | 0h 11m |", md);
+        Assert.Contains("| slack | Slack | 0h 03m |", md);
+
+        Assert.Contains("## Top Windows", md);
+        Assert.Contains("| Application | Window Title | Duration |", md);
+        Assert.Contains("auth.ts — VS Code", md);
+        Assert.Contains("Program.cs — VS Code", md);
+
+        Assert.Contains("**Total tracked:** 1h 19m", md);
+    }
+}
+
+public class SummaryFormatterMarkdownTests
+{
+    private static ActivityEntry MakeEntry(string proc, string title, int dots) =>
+        new(new WindowRecord(TimeSpan.Zero, proc, title), dots);
+
+    [Fact]
+    public void FormatMarkdown_PipeInWindowTitle_IsEscaped()
+    {
+        var entries = new[] { MakeEntry("code", "File | tab — VS Code", 2) };
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5);
+        var md = SummaryFormatter.FormatMarkdown(summary, "test");
+
+        Assert.Contains(@"File \| tab — VS Code", md);
+    }
+
+    [Fact]
+    public void FormatMarkdown_EmptyFriendlyName_LeavesBlankCell()
+    {
+        var entries = new[] { MakeEntry("unknownapp99", "Some Window", 0) };
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5);
+        var md = SummaryFormatter.FormatMarkdown(summary, "test");
+
+        Assert.Contains("| unknownapp99 |  |", md);
+    }
+}
+
+public sealed class ProcessorPublishFixture : IDisposable
+{
+    public string PublishDir { get; } =
+        Path.Combine(Path.GetTempPath(), "alp-inttest-" + Guid.NewGuid().ToString("N")[..8]);
+
+    public ProcessorPublishFixture()
+    {
+        Directory.CreateDirectory(PublishDir);
+        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var projectPath = Path.Combine(repoRoot, "ActivityLogProcessor", "ActivityLogProcessor.csproj");
+
+        var psi = new ProcessStartInfo("dotnet",
+            $"publish \"{projectPath}\" -c Release -r win-x64 --self-contained true " +
+            $"-p:PublishSingleFile=true -o \"{PublishDir}\" --nologo -v quiet")
+        {
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+        };
+        using var proc = Process.Start(psi)!;
+        proc.WaitForExit();
+        if (proc.ExitCode != 0)
+            throw new InvalidOperationException(
+                $"dotnet publish failed (exit {proc.ExitCode}): {proc.StandardError.ReadToEnd()}");
+    }
+
+    public void Dispose() => Directory.Delete(PublishDir, recursive: true);
+}
+
+public class ActivityLogProcessorIntegrationTests(ProcessorPublishFixture fixture)
+    : IClassFixture<ProcessorPublishFixture>
+{
+    [Fact]
+    public void Published_HasNoSeparateDll()
+    {
+        var files = Directory.GetFiles(fixture.PublishDir).Select(Path.GetFileName).ToArray();
+
+        Assert.DoesNotContain("ActivityLogProcessor.dll", files);
+        Assert.Contains("ActivityLogProcessor.exe", files);
+    }
+
+    [Fact]
+    public void Published_Exe_RunsAndProducesMarkdownFile()
+    {
+        var exePath = Path.Combine(fixture.PublishDir, "ActivityLogProcessor.exe");
+        var logFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".log");
+        var outDir  = Path.Combine(Path.GetTempPath(), "alp-out-" + Guid.NewGuid().ToString("N")[..8]);
+
+        try
+        {
+            File.WriteAllLines(logFile,
+            [
+                @"09:00:00 code ""auth.ts — VS Code""",
+                ".", ".",
+                @"09:00:10 chrome ""GitHub""",
+                ".",
+            ]);
+
+            var psi = new ProcessStartInfo(exePath,
+                $"--logpath \"{logFile}\" --out-dir \"{outDir}\"")
+            {
+                RedirectStandardError = true,
+            };
+            using var proc = Process.Start(psi)!;
+            proc.WaitForExit();
+
+            Assert.Equal(0, proc.ExitCode);
+
+            var dateLabel  = Path.GetFileNameWithoutExtension(logFile);
+            var outputFile = Path.Combine(outDir, dateLabel + ".md");
+            Assert.True(File.Exists(outputFile), $"Expected .md file at: {outputFile}");
+
+            var content = File.ReadAllText(outputFile);
+            Assert.Contains("# Activity Summary", content);
+            Assert.Contains("## By Application", content);
+            Assert.Contains("## Top Windows", content);
+        }
+        finally
+        {
+            if (File.Exists(logFile)) File.Delete(logFile);
+            if (Directory.Exists(outDir)) Directory.Delete(outDir, recursive: true);
+        }
     }
 }
