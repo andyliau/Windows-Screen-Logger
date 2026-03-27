@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
-using WindowsActivityLogger.Installation;
 
 namespace WindowsActivityLogger.Services;
 
@@ -154,31 +152,11 @@ public sealed class ActivitySummaryService
 		if (_processorPathResolver is not null)
 			return _processorPathResolver();
 
-		var installedPath = SelfInstaller.InstalledProcessorPath;
-		if (File.Exists(installedPath))
-			return installedPath;
+		var processorPath = Path.Combine(AppContext.BaseDirectory, "ActivityLogProcessor.exe");
+		if (!File.Exists(processorPath))
+			throw new FileNotFoundException($"ActivityLogProcessor.exe was not found in the running executable directory: {AppContext.BaseDirectory}");
 
-		var localPath = Path.Combine(AppContext.BaseDirectory, "ActivityLogProcessor.exe");
-		if (File.Exists(localPath))
-			return localPath;
-
-		var extractedPath = Path.Combine(
-			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-			ApplicationConstants.ApplicationName,
-			"Tools",
-			"ActivityLogProcessor.exe");
-
-		if (File.Exists(extractedPath))
-			return extractedPath;
-
-		Directory.CreateDirectory(Path.GetDirectoryName(extractedPath)!);
-		using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("ActivityLogProcessor.exe");
-		if (stream is null)
-			throw new FileNotFoundException("Embedded ActivityLogProcessor.exe resource was not found.");
-
-		using var output = new FileStream(extractedPath, FileMode.Create, FileAccess.Write, FileShare.Read);
-		stream.CopyTo(output);
-		return extractedPath;
+		return processorPath;
 	}
 
 	private static async Task<ProcessExecutionResult> RunProcessAsync(string fileName, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
