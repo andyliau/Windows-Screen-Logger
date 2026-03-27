@@ -5,6 +5,8 @@ namespace ActivityLogProcessor;
 
 public static class SummaryFormatter
 {
+    private static readonly TimeSpan MarkdownMinimumAppDuration = TimeSpan.FromMinutes(2);
+
     public static string FormatTimeline(ActivitySummary summary, string? dateLabel = null)
     {
         var sb = new StringBuilder();
@@ -63,6 +65,12 @@ public static class SummaryFormatter
     {
         var sb = new StringBuilder();
         var label = dateLabel ?? "Activity Summary";
+        var includedApps = summary.ByApplication
+            .Where(app => app.TotalDuration >= MarkdownMinimumAppDuration)
+            .ToList();
+        var includedProcesses = includedApps
+            .Select(app => app.Process)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         sb.AppendLine($"# Activity Summary — {label}");
         sb.AppendLine();
@@ -71,7 +79,7 @@ public static class SummaryFormatter
         sb.AppendLine();
         sb.AppendLine("| Application | Friendly Name | Total Time |");
         sb.AppendLine("|-------------|---------------|------------|");
-        foreach (var app in summary.ByApplication)
+        foreach (var app in includedApps)
         {
             var duration = FormatDuration(app.TotalDuration);
             var friendly = app.FriendlyName ?? string.Empty;
@@ -83,7 +91,7 @@ public static class SummaryFormatter
         sb.AppendLine();
         sb.AppendLine("| Application | Window Title | Duration |");
         sb.AppendLine("|-------------|--------------|----------|");
-        foreach (var w in summary.TopWindows)
+        foreach (var w in summary.TopWindows.Where(window => includedProcesses.Contains(window.Process)))
         {
             var mins = FormatMinutes(w.TotalDuration);
             sb.AppendLine($"| {w.Process} | {EscapeMarkdown(w.Title)} | {mins} |");

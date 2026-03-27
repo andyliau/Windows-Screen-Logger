@@ -451,8 +451,8 @@ public class SummaryFormatterMarkdownTests
     [Fact]
     public void FormatMarkdown_PipeInWindowTitle_IsEscaped()
     {
-        var entries = new[] { MakeEntry("code", "File | tab — VS Code", 2) };
-        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5);
+        var entries = new[] { MakeEntry("code", "File | tab — VS Code", 1) };
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60);
         var md = SummaryFormatter.FormatMarkdown(summary, "test");
 
         Assert.Contains(@"File \| tab — VS Code", md);
@@ -461,11 +461,28 @@ public class SummaryFormatterMarkdownTests
     [Fact]
     public void FormatMarkdown_EmptyFriendlyName_LeavesBlankCell()
     {
-        var entries = new[] { MakeEntry("unknownapp99", "Some Window", 0) };
-        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 5);
+        var entries = new[] { MakeEntry("unknownapp99", "Some Window", 1) };
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60);
         var md = SummaryFormatter.FormatMarkdown(summary, "test");
 
         Assert.Contains("| unknownapp99 |  |", md);
+    }
+
+    [Fact]
+    public void FormatMarkdown_IgnoresAppsUnderTwoMinutes()
+    {
+        var entries = new[]
+        {
+            MakeEntry("code", "Long Task", 1),
+            MakeEntry("notepad", "Short Note", 0),
+        };
+        var summary = ActivitySummariser.Summarise(entries, sampleIntervalSeconds: 60);
+        var md = SummaryFormatter.FormatMarkdown(summary, "test");
+
+        Assert.Contains("| code | Visual Studio Code | 0h 02m |", md);
+        Assert.DoesNotContain("| notepad |", md);
+        Assert.DoesNotContain("Short Note", md);
+        Assert.Contains("**Total tracked:** 0h 03m", md);
     }
 }
 
