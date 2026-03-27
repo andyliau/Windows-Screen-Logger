@@ -10,11 +10,15 @@ namespace WindowsActivityLogger;
 
 public partial class MainForm : Form
 {
+	private const int SummaryCheckIntervalMilliseconds = 60 * 60 * 1000;
+
 	private Timer captureTimer = null!;
 	private Timer clearTimer = null!;
 	private Timer activityTimer = null!;
+	private Timer summaryTimer = null!;
 	private int captureInterval;
 	private bool isSessionLocked;
+	private int _isGeneratingAutomaticSummary;
 
 	private NotifyIcon notifyIcon = null!;
 	private readonly bool _postInstall;
@@ -23,6 +27,7 @@ public partial class MainForm : Form
 	private readonly ScreenshotService screenshotService;
 	private readonly CleanupService cleanupService;
 	private readonly ActivityLoggingService activityLoggingService;
+	private readonly ActivitySummaryService activitySummaryService;
 
 	public MainForm(AppConfiguration? configuration = null, ScreenshotService? screenshot = null, CleanupService? cleanup = null, ILogger? logger = null, bool postInstall = false)
 	{
@@ -32,7 +37,8 @@ public partial class MainForm : Form
 		screenshotService = screenshot ?? new ScreenshotService(config, _logger);
 		cleanupService = cleanup ?? new CleanupService(config, _logger);
 		activityLoggingService = new ActivityLoggingService(config, _logger);
-		
+		activitySummaryService = new ActivitySummaryService(config, _logger);
+
 		InitializeComponent();
 		Configure();
 
@@ -42,13 +48,19 @@ public partial class MainForm : Form
 		// Clean up old screenshots on startup
 		CleanOldScreenshots();
 
-		 // Initialize and start the clear timer
+		// Initialize and start the clear timer
 		clearTimer = new Timer();
 		clearTimer.Interval = config.CleanupIntervalHours * 60 * 60 * 1000; // Convert hours to milliseconds
 		clearTimer.Tick += (sender, e) => CleanOldScreenshots();
 		clearTimer.Start();
 
+		summaryTimer = new Timer();
+		summaryTimer.Interval = SummaryCheckIntervalMilliseconds;
+		summaryTimer.Tick += SummaryTimer_Tick;
+		summaryTimer.Start();
+
 		_logger.LogInformation($"Clear timer set to {config.CleanupIntervalHours} hours");
+		_logger.LogInformation("Activity summary auto-check timer set to 1 hour");
 
 		// Hide form on startup
 		this.WindowState = FormWindowState.Minimized;
@@ -69,6 +81,8 @@ public partial class MainForm : Form
 			clearTimer?.Dispose();
 			activityTimer?.Stop();
 			activityTimer?.Dispose();
+			summaryTimer?.Stop();
+			summaryTimer?.Dispose();
 			activityLoggingService.Flush(); // write any buffered lines before exit
 			components?.Dispose();
 		}
@@ -95,15 +109,16 @@ public partial class MainForm : Form
 		notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
 		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
 		notifyIcon.ContextMenuStrip.Items.Add("Open Activity Log", null, OpenActivityLog);
+		notifyIcon.ContextMenuStrip.Items.Add("Generate Activity Summary...", null, GenerateActivitySummaryAsync);
 		notifyIcon.ContextMenuStrip.Items.Add("Clean Old Screenshots", null, OnCleanClick);
-		
+
 		// Add uninstall option if application is installed
 		if (SelfInstaller.IsInstalled() && SelfInstaller.IsRunningFromInstallLocation())
 		{
 			notifyIcon.ContextMenuStrip.Items.Add("-"); // Separator
 			notifyIcon.ContextMenuStrip.Items.Add("Uninstall", null, OnUninstallClick);
 		}
-		
+
 		notifyIcon.ContextMenuStrip.Items.Add("-"); // Separator
 		notifyIcon.ContextMenuStrip.Items.Add("Exit", null, Exit);
 
@@ -130,6 +145,8 @@ public partial class MainForm : Form
 				"Installation complete! The activity logger is now running.",
 				ToolTipIcon.Info);
 		}
+
+		_ = RunAutomaticSummaryGenerationAsync();
 	}
 
 	private void Configure()
@@ -142,20 +159,20 @@ public partial class MainForm : Form
 			MessageBox.Show("Invalid capture interval. Please check your settings.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			return;
 		}
-		
+
 		if (captureTimer != null)
 		{
 			captureTimer.Stop();
 			captureTimer.Tick -= CaptureTimer_Tick;
 		}
-		
+
 		captureTimer = new Timer
 		{
 			Interval = captureInterval * 1000
 		};
 		captureTimer.Tick += CaptureTimer_Tick;
 		captureTimer.Start();
-		
+
 		_logger.LogInformation($"Capture timer configured with {captureInterval} second interval");
 
 		// Activity logging — separate timer, independent of screenshot interval
@@ -260,6 +277,135 @@ public partial class MainForm : Form
 		}
 	}
 
+	private async void GenerateActivitySummaryAsync(object? sender, EventArgs e)
+	{
+		var logDirectory = activitySummaryService.GetLogDirectory();
+		if (!Directory.Exists(logDirectory))
+		{
+			MessageBox.Show(
+				"No activity log folder exists yet.",
+				"Generate Activity Summary",
+				MessageBoxButtons.OK,
+				MessageBoxIcon.Information);
+			return;
+		}
+
+		using var dialog = new OpenFileDialog
+		{
+			Title = "Select activity log to summarise",
+			InitialDirectory = logDirectory,
+			Filter = "Log files (*.log)|*.log|All files (*.*)|*.*",
+			CheckFileExists = true,
+			CheckPathExists = true,
+			Multiselect = false,
+			RestoreDirectory = true,
+		};
+
+		if (dialog.ShowDialog() != DialogResult.OK)
+			return;
+
+		await GenerateSummaryWithFeedbackAsync(dialog.FileName, showSuccessMessage: true);
+	}
+
+	private async void SummaryTimer_Tick(object? sender, EventArgs e)
+	{
+		await RunAutomaticSummaryGenerationAsync();
+	}
+
+	private async Task RunAutomaticSummaryGenerationAsync()
+	{
+		if (Interlocked.Exchange(ref _isGeneratingAutomaticSummary, 1) == 1)
+			return;
+
+		try
+		{
+			var result = await activitySummaryService.GeneratePreviousDaySummaryIfMissingAsync();
+			switch (result.Status)
+			{
+				case ActivitySummaryService.SummaryGenerationStatus.Success:
+					_logger.LogInformation($"Automatic activity summary generated: {result.OutputPath}");
+					break;
+				case ActivitySummaryService.SummaryGenerationStatus.AlreadyExists:
+				case ActivitySummaryService.SummaryGenerationStatus.NoPreviousDayLog:
+				case ActivitySummaryService.SummaryGenerationStatus.MissingOutputDirectory:
+					_logger.LogDebug(result.Message);
+					break;
+				case ActivitySummaryService.SummaryGenerationStatus.MissingLog:
+				case ActivitySummaryService.SummaryGenerationStatus.Failed:
+					_logger.LogWarning($"Automatic summary was not generated: {result.Message}");
+					break;
+			}
+		}
+		finally
+		{
+			Interlocked.Exchange(ref _isGeneratingAutomaticSummary, 0);
+		}
+	}
+
+	private async Task GenerateSummaryWithFeedbackAsync(string logPath, bool showSuccessMessage)
+	{
+		try
+		{
+			UseWaitCursor = true;
+			var result = await activitySummaryService.GenerateSummaryAsync(logPath);
+
+			if (result.Status == ActivitySummaryService.SummaryGenerationStatus.AlreadyExists)
+			{
+				var replaceResult = MessageBox.Show(
+					$"A summary already exists for this log:\n{result.OutputPath}\n\nReplace it?",
+					"Generate Activity Summary",
+					MessageBoxButtons.YesNo,
+					MessageBoxIcon.Question,
+					MessageBoxDefaultButton.Button2);
+
+				if (replaceResult == DialogResult.Yes)
+					result = await activitySummaryService.GenerateSummaryAsync(logPath, overwriteExisting: true);
+			}
+
+			switch (result.Status)
+			{
+				case ActivitySummaryService.SummaryGenerationStatus.Success:
+					if (showSuccessMessage)
+					{
+						MessageBox.Show(
+							$"Activity summary written to:\n{result.OutputPath}",
+							"Generate Activity Summary",
+							MessageBoxButtons.OK,
+							MessageBoxIcon.Information);
+					}
+					break;
+				case ActivitySummaryService.SummaryGenerationStatus.AlreadyExists:
+					break;
+				case ActivitySummaryService.SummaryGenerationStatus.MissingOutputDirectory:
+					MessageBox.Show(
+						"Set Activity Summary Output Folder in Settings before generating summaries.",
+						"Generate Activity Summary",
+						MessageBoxButtons.OK,
+						MessageBoxIcon.Information);
+					break;
+				case ActivitySummaryService.SummaryGenerationStatus.MissingLog:
+				case ActivitySummaryService.SummaryGenerationStatus.NoPreviousDayLog:
+					MessageBox.Show(
+						result.Message,
+						"Generate Activity Summary",
+						MessageBoxButtons.OK,
+						MessageBoxIcon.Information);
+					break;
+				case ActivitySummaryService.SummaryGenerationStatus.Failed:
+					MessageBox.Show(
+						$"Failed to generate summary.\n\n{result.Message}",
+						"Generate Activity Summary",
+						MessageBoxButtons.OK,
+						MessageBoxIcon.Error);
+					break;
+			}
+		}
+		finally
+		{
+			UseWaitCursor = false;
+		}
+	}
+
 	private void OpenSaveFolder(object? sender, EventArgs e)
 	{
 		try
@@ -320,7 +466,7 @@ public partial class MainForm : Form
 	private void OnCleanClick(object? sender, EventArgs e)
 	{
 		int deleted = CleanOldScreenshots();
-		MessageBox.Show($"Old screenshots (older than {config.ClearDays} days) have been removed. Deleted {deleted} folder(s).", 
+		MessageBox.Show($"Old screenshots (older than {config.ClearDays} days) have been removed. Deleted {deleted} folder(s).",
 			"Cleanup Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
 	}
 
@@ -336,11 +482,12 @@ public partial class MainForm : Form
 		return dl;
 	}
 
-	private void OnUninstallClick(object? sender, EventArgs e)	{
+	private void OnUninstallClick(object? sender, EventArgs e)
+	{
 		// Safety check
 		if (!SelfInstaller.IsInstalled() || !SelfInstaller.IsRunningFromInstallLocation())
 		{
-			MessageBox.Show("Uninstall is only available when running from the installed location.", 
+			MessageBox.Show("Uninstall is only available when running from the installed location.",
 				"Uninstall Not Available", MessageBoxButtons.OK, MessageBoxIcon.Information);
 			return;
 		}
@@ -366,7 +513,7 @@ public partial class MainForm : Form
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show($"Failed to start uninstallation: {ex.Message}", 
+				MessageBox.Show($"Failed to start uninstallation: {ex.Message}",
 					"Uninstall Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}

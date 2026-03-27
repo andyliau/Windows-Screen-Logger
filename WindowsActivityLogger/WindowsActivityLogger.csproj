@@ -84,4 +84,13 @@
 		<Message Text="ActivityLogProcessor published and embedded." Importance="high" />
 	</Target>
 
+	<Target Name="CopyActivityLogProcessorToOutput" AfterTargets="Build" DependsOnTargets="PublishActivityLogProcessor"
+	        Inputs="$(ActivityProcessorExe)"
+	        Outputs="$(OutDir)ActivityLogProcessor.exe">
+		<Copy SourceFiles="$(ActivityProcessorExe)"
+		      DestinationFiles="$(OutDir)ActivityLogProcessor.exe"
+		      SkipUnchangedFiles="true" />
+		<Message Text="ActivityLogProcessor copied to output: $(OutDir)ActivityLogProcessor.exe" Importance="high" />
+	</Target>
+
 </Project>
