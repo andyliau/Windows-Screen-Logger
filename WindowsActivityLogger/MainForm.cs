@@ -10,11 +10,15 @@ namespace WindowsActivityLogger;
 
 public partial class MainForm : Form
 {
+	private const int SummaryCheckIntervalMilliseconds = 60 * 60 * 1000;
+
 	private Timer captureTimer = null!;
 	private Timer clearTimer = null!;
 	private Timer activityTimer = null!;
+	private Timer summaryTimer = null!;
 	private int captureInterval;
 	private bool isSessionLocked;
+	private int _isGeneratingAutomaticSummary;
 
 	private NotifyIcon notifyIcon = null!;
 	private readonly bool _postInstall;
@@ -50,7 +54,13 @@ public partial class MainForm : Form
 		clearTimer.Tick += (sender, e) => CleanOldScreenshots();
 		clearTimer.Start();
 
+		summaryTimer = new Timer();
+		summaryTimer.Interval = SummaryCheckIntervalMilliseconds;
+		summaryTimer.Tick += SummaryTimer_Tick;
+		summaryTimer.Start();
+
 		_logger.LogInformation($"Clear timer set to {config.CleanupIntervalHours} hours");
+		_logger.LogInformation("Activity summary auto-check timer set to 1 hour");
 
 		// Hide form on startup
 		this.WindowState = FormWindowState.Minimized;
@@ -71,6 +81,8 @@ public partial class MainForm : Form
 			clearTimer?.Dispose();
 			activityTimer?.Stop();
 			activityTimer?.Dispose();
+			summaryTimer?.Stop();
+			summaryTimer?.Dispose();
 			activityLoggingService.Flush(); // write any buffered lines before exit
 			components?.Dispose();
 		}
@@ -134,7 +146,7 @@ public partial class MainForm : Form
 				ToolTipIcon.Info);
 		}
 
-		_ = GeneratePreviousDaySummaryOnStartupAsync();
+		_ = RunAutomaticSummaryGenerationAsync();
 	}
 
 	private void Configure()
@@ -295,13 +307,23 @@ public partial class MainForm : Form
 		await GenerateSummaryWithFeedbackAsync(dialog.FileName, showSuccessMessage: true);
 	}
 
-	private async Task GeneratePreviousDaySummaryOnStartupAsync()
+	private async void SummaryTimer_Tick(object? sender, EventArgs e)
 	{
+		await RunAutomaticSummaryGenerationAsync();
+	}
+
+	private async Task RunAutomaticSummaryGenerationAsync()
+	{
+		if (Interlocked.Exchange(ref _isGeneratingAutomaticSummary, 1) == 1)
+			return;
+
+		try
+		{
 		var result = await activitySummaryService.GeneratePreviousDaySummaryIfMissingAsync();
 		switch (result.Status)
 		{
 			case ActivitySummaryService.SummaryGenerationStatus.Success:
-				_logger.LogInformation($"Previous-day activity summary generated: {result.OutputPath}");
+				_logger.LogInformation($"Automatic activity summary generated: {result.OutputPath}");
 				break;
 			case ActivitySummaryService.SummaryGenerationStatus.AlreadyExists:
 			case ActivitySummaryService.SummaryGenerationStatus.NoPreviousDayLog:
@@ -310,8 +332,13 @@ public partial class MainForm : Form
 				break;
 			case ActivitySummaryService.SummaryGenerationStatus.MissingLog:
 			case ActivitySummaryService.SummaryGenerationStatus.Failed:
-				_logger.LogWarning($"Previous-day summary was not generated: {result.Message}");
+				_logger.LogWarning($"Automatic summary was not generated: {result.Message}");
 				break;
+		}
+		}
+		finally
+		{
+			Interlocked.Exchange(ref _isGeneratingAutomaticSummary, 0);
 		}
 	}
 
