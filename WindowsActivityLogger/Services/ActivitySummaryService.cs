@@ -39,11 +39,16 @@ public sealed class ActivitySummaryService
 		if (File.Exists(outputPath) && !overwriteExisting)
 			return SummaryGenerationResult.AlreadyExists(logPath, outputPath);
 
+		string? backupPath = null;
+
 		try
 		{
 			Directory.CreateDirectory(outputDirectory);
 			if (overwriteExisting && File.Exists(outputPath))
-				File.Delete(outputPath);
+			{
+				backupPath = Path.Combine(outputDirectory, Path.GetRandomFileName() + ".bak");
+				File.Move(outputPath, backupPath, overwrite: false);
+			}
 
 			var processorPath = ResolveProcessorPath();
 			var args = new[]
@@ -61,6 +66,7 @@ public sealed class ActivitySummaryService
 
 			if (execution.ExitCode != 0)
 			{
+				RestoreBackupIfNeeded(backupPath, outputPath);
 				var error = string.IsNullOrWhiteSpace(execution.StandardError)
 					? $"ActivityLogProcessor exited with code {execution.ExitCode}."
 					: execution.StandardError.Trim();
@@ -70,16 +76,20 @@ public sealed class ActivitySummaryService
 
 			if (!File.Exists(outputPath))
 			{
+				RestoreBackupIfNeeded(backupPath, outputPath);
 				const string missingOutputMessage = "Summary generation completed but no output file was created.";
 				_logger.LogError(missingOutputMessage);
 				return SummaryGenerationResult.Failed(missingOutputMessage, logPath, outputPath);
 			}
+
+			DeleteBackupIfNeeded(backupPath);
 
 			_logger.LogInformation($"Activity summary written to '{outputPath}'");
 			return SummaryGenerationResult.Success(logPath, outputPath);
 		}
 		catch (Exception ex)
 		{
+			RestoreBackupIfNeeded(backupPath, outputPath);
 			_logger.LogException(ex, "Activity summary generation");
 			return SummaryGenerationResult.Failed(ex.Message, logPath, outputPath);
 		}
@@ -126,17 +136,33 @@ public sealed class ActivitySummaryService
 		if (File.Exists(expectedPath))
 			return expectedPath;
 
-		return Directory.EnumerateFiles(logDirectory, "*.log")
+		return Directory.EnumerateFiles(logDirectory, "????-??-??.log")
 			.Select(path => new
 			{
 				Path = path,
-				Date = TryGetLogDate(path) ?? new FileInfo(path).LastWriteTime.Date,
+				Date = TryGetLogDate(path),
 			})
-			.Where(file => file.Date < now.Date)
-			.OrderByDescending(file => file.Date)
-			.ThenByDescending(file => new FileInfo(file.Path).LastWriteTimeUtc)
+			.Where(file => file.Date.HasValue && file.Date.Value < now.Date)
+			.OrderByDescending(file => file.Date!.Value)
 			.Select(file => file.Path)
 			.FirstOrDefault();
+	}
+
+	private static void RestoreBackupIfNeeded(string? backupPath, string outputPath)
+	{
+		if (string.IsNullOrEmpty(backupPath) || !File.Exists(backupPath))
+			return;
+
+		if (File.Exists(outputPath))
+			File.Delete(outputPath);
+
+		File.Move(backupPath, outputPath, overwrite: false);
+	}
+
+	private static void DeleteBackupIfNeeded(string? backupPath)
+	{
+		if (!string.IsNullOrEmpty(backupPath) && File.Exists(backupPath))
+			File.Delete(backupPath);
 	}
 
 	private static DateTime? TryGetLogDate(string path)

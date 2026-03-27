@@ -82,6 +82,20 @@ public class ActivitySummaryServiceTests : IDisposable
 	}
 
 	[Fact]
+	public void GetPreviousDayLogPath_IgnoresNonActivityLogFiles()
+	{
+		var now = new DateTime(2026, 3, 27, 8, 0, 0);
+		var validLogPath = Path.Combine(_logDir, "2026-03-25.log");
+		var otherLogPath = Path.Combine(_logDir, "application.log");
+		File.WriteAllText(validLogPath, "activity log");
+		File.WriteAllText(otherLogPath, "not an activity log");
+
+		var service = CreateService();
+
+		Assert.Equal(validLogPath, service.GetPreviousDayLogPath(now));
+	}
+
+	[Fact]
 	public async Task GeneratePreviousDaySummaryIfMissingAsync_SkipsWhenSummaryExists()
 	{
 		var now = new DateTime(2026, 3, 27, 8, 0, 0);
@@ -162,6 +176,25 @@ public class ActivitySummaryServiceTests : IDisposable
 		Assert.Equal(ActivitySummaryService.SummaryGenerationStatus.Success, result.Status);
 		Assert.Equal(1, processCallCount);
 		Assert.Equal("replacement summary", File.ReadAllText(outputPath));
+	}
+
+	[Fact]
+	public async Task GenerateSummaryAsync_WithOverwriteExisting_RestoresExistingSummaryOnFailure()
+	{
+		var logPath = Path.Combine(_logDir, "2026-03-26.log");
+		var outputPath = Path.Combine(_outputDir, "2026-03-26.md");
+		File.WriteAllText(logPath, "sample");
+		Directory.CreateDirectory(_outputDir);
+		File.WriteAllText(outputPath, "existing summary");
+
+		var service = CreateService(
+			processorPathResolver: () => "fake-processor.exe",
+			processRunner: (_, _, _) => Task.FromResult(new ActivitySummaryService.ProcessExecutionResult(1, string.Empty, "processor failed")));
+
+		var result = await service.GenerateSummaryAsync(logPath, overwriteExisting: true);
+
+		Assert.Equal(ActivitySummaryService.SummaryGenerationStatus.Failed, result.Status);
+		Assert.Equal("existing summary", File.ReadAllText(outputPath));
 	}
 
 	private ActivitySummaryService CreateService(
