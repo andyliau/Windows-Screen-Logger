@@ -23,6 +23,7 @@ public partial class MainForm : Form
 	private readonly ScreenshotService screenshotService;
 	private readonly CleanupService cleanupService;
 	private readonly ActivityLoggingService activityLoggingService;
+	private readonly ActivitySummaryService activitySummaryService;
 
 	public MainForm(AppConfiguration? configuration = null, ScreenshotService? screenshot = null, CleanupService? cleanup = null, ILogger? logger = null, bool postInstall = false)
 	{
@@ -32,6 +33,7 @@ public partial class MainForm : Form
 		screenshotService = screenshot ?? new ScreenshotService(config, _logger);
 		cleanupService = cleanup ?? new CleanupService(config, _logger);
 		activityLoggingService = new ActivityLoggingService(config, _logger);
+		activitySummaryService = new ActivitySummaryService(config, _logger);
 		
 		InitializeComponent();
 		Configure();
@@ -95,6 +97,7 @@ public partial class MainForm : Form
 		notifyIcon.ContextMenuStrip.Items.Add("Settings", null, ShowSettings);
 		notifyIcon.ContextMenuStrip.Items.Add("Open Saved Image Folder", null, OpenSaveFolder);
 		notifyIcon.ContextMenuStrip.Items.Add("Open Activity Log", null, OpenActivityLog);
+		notifyIcon.ContextMenuStrip.Items.Add("Generate Activity Summary...", null, GenerateActivitySummaryAsync);
 		notifyIcon.ContextMenuStrip.Items.Add("Clean Old Screenshots", null, OnCleanClick);
 		
 		// Add uninstall option if application is installed
@@ -130,6 +133,8 @@ public partial class MainForm : Form
 				"Installation complete! The activity logger is now running.",
 				ToolTipIcon.Info);
 		}
+
+		_ = GeneratePreviousDaySummaryOnStartupAsync();
 	}
 
 	private void Configure()
@@ -257,6 +262,120 @@ public partial class MainForm : Form
 			// Logging is on but no entries recorded yet today
 			var folder = Path.GetDirectoryName(logPath)!;
 			Process.Start("explorer.exe", folder);
+		}
+	}
+
+	private async void GenerateActivitySummaryAsync(object? sender, EventArgs e)
+	{
+		var logDirectory = activitySummaryService.GetLogDirectory();
+		if (!Directory.Exists(logDirectory))
+		{
+			MessageBox.Show(
+				"No activity log folder exists yet.",
+				"Generate Activity Summary",
+				MessageBoxButtons.OK,
+				MessageBoxIcon.Information);
+			return;
+		}
+
+		using var dialog = new OpenFileDialog
+		{
+			Title = "Select activity log to summarise",
+			InitialDirectory = logDirectory,
+			Filter = "Log files (*.log)|*.log|All files (*.*)|*.*",
+			CheckFileExists = true,
+			CheckPathExists = true,
+			Multiselect = false,
+			RestoreDirectory = true,
+		};
+
+		if (dialog.ShowDialog() != DialogResult.OK)
+			return;
+
+		await GenerateSummaryWithFeedbackAsync(dialog.FileName, showSuccessMessage: true);
+	}
+
+	private async Task GeneratePreviousDaySummaryOnStartupAsync()
+	{
+		var result = await activitySummaryService.GeneratePreviousDaySummaryIfMissingAsync();
+		switch (result.Status)
+		{
+			case ActivitySummaryService.SummaryGenerationStatus.Success:
+				_logger.LogInformation($"Previous-day activity summary generated: {result.OutputPath}");
+				break;
+			case ActivitySummaryService.SummaryGenerationStatus.AlreadyExists:
+			case ActivitySummaryService.SummaryGenerationStatus.NoPreviousDayLog:
+			case ActivitySummaryService.SummaryGenerationStatus.MissingOutputDirectory:
+				_logger.LogDebug(result.Message);
+				break;
+			case ActivitySummaryService.SummaryGenerationStatus.MissingLog:
+			case ActivitySummaryService.SummaryGenerationStatus.Failed:
+				_logger.LogWarning($"Previous-day summary was not generated: {result.Message}");
+				break;
+		}
+	}
+
+	private async Task GenerateSummaryWithFeedbackAsync(string logPath, bool showSuccessMessage)
+	{
+		try
+		{
+			UseWaitCursor = true;
+			var result = await activitySummaryService.GenerateSummaryAsync(logPath);
+
+			if (result.Status == ActivitySummaryService.SummaryGenerationStatus.AlreadyExists)
+			{
+				var replaceResult = MessageBox.Show(
+					$"A summary already exists for this log:\n{result.OutputPath}\n\nReplace it?",
+					"Generate Activity Summary",
+					MessageBoxButtons.YesNo,
+					MessageBoxIcon.Question,
+					MessageBoxDefaultButton.Button2);
+
+				if (replaceResult == DialogResult.Yes)
+					result = await activitySummaryService.GenerateSummaryAsync(logPath, overwriteExisting: true);
+			}
+
+			switch (result.Status)
+			{
+				case ActivitySummaryService.SummaryGenerationStatus.Success:
+					if (showSuccessMessage)
+					{
+						MessageBox.Show(
+							$"Activity summary written to:\n{result.OutputPath}",
+							"Generate Activity Summary",
+							MessageBoxButtons.OK,
+							MessageBoxIcon.Information);
+					}
+					break;
+				case ActivitySummaryService.SummaryGenerationStatus.AlreadyExists:
+					break;
+				case ActivitySummaryService.SummaryGenerationStatus.MissingOutputDirectory:
+					MessageBox.Show(
+						"Set Activity Summary Output Folder in Settings before generating summaries.",
+						"Generate Activity Summary",
+						MessageBoxButtons.OK,
+						MessageBoxIcon.Information);
+					break;
+				case ActivitySummaryService.SummaryGenerationStatus.MissingLog:
+				case ActivitySummaryService.SummaryGenerationStatus.NoPreviousDayLog:
+					MessageBox.Show(
+						result.Message,
+						"Generate Activity Summary",
+						MessageBoxButtons.OK,
+						MessageBoxIcon.Information);
+					break;
+				case ActivitySummaryService.SummaryGenerationStatus.Failed:
+					MessageBox.Show(
+						$"Failed to generate summary.\n\n{result.Message}",
+						"Generate Activity Summary",
+						MessageBoxButtons.OK,
+						MessageBoxIcon.Error);
+					break;
+			}
+		}
+		finally
+		{
+			UseWaitCursor = false;
 		}
 	}
 
